@@ -17,7 +17,6 @@ include 'connect.php';
 <section class="playlist">
     <h3 class="heading">Music Playlist</h3>
 
-
     <section class="search__bar">
         <form class="container search__bar-container" action="search.php" method="GET">
             <div style="width:100%">
