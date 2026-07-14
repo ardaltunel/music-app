@@ -3,7 +3,7 @@ name: Supabase Keep Alive
 on:
   schedule:
     # Run every 3 days to keep the free Supabase project active.
-    - cron: "23 6 */3 * *"
+    - cron: "0 21 */3 * *"
   workflow_dispatch:
 
 permissions:
