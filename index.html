@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Arda Altunel Music playlist">
     <title>Music App | Arda Altunel</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-icon-180x180.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=4">
-    <link rel="stylesheet" href="css/overscroll-fix.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=4">
+    <link rel="stylesheet" href="assets/css/overscroll-fix.css">
 </head>
 <body data-page="home">
 <header class="site-header">
@@ -43,21 +43,50 @@
 <div class="music-player" id="myModal" aria-hidden="true">
     <i class="fas fa-times" id="close" role="button" aria-label="Kapat"></i>
     <div class="main-box">
-        <button class="player-arrow" id="prev_song_button" type="button" aria-label="Önceki şarkı"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
         <div class="box box-custom">
             <img src="" class="album" alt="">
             <div class="name"></div>
             <div class="artist"></div>
-            <audio src="" controls class="music" id="myAudio"></audio>
+            <div class="player-controls">
+                <audio src="" class="music" id="myAudio" preload="metadata"></audio>
+                <div class="player-control-row">
+                    <div class="player-volume-group">
+                        <button class="player-control-button" type="button" data-player-mute aria-label="Sesi kapat">
+                            <i class="fas fa-volume-high"></i>
+                        </button>
+                        <input class="player-volume" type="range" min="0" max="1" value="1" step="0.01" data-player-volume aria-label="Ses seviyesi">
+                    </div>
+                    <div class="player-skip-group">
+                        <button class="player-control-button player-skip-button" id="prev_song_button" type="button" aria-label="Önceki şarkı">
+                            <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        </button>
+                        <button class="player-control-button is-primary" type="button" data-player-toggle aria-label="Oynat">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="player-control-button player-skip-button" id="next_song_button" type="button" aria-label="Sonraki şarkı">
+                            <i class="fa fa-angle-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <a class="player-download" href="#" data-player-download>
+                        <i class="fas fa-download"></i><span>İndir</span>
+                    </a>
+                </div>
+                <div class="player-timeline">
+                    <div class="player-time">
+                        <span data-current-time>0:00</span>
+                        <span data-duration>0:00</span>
+                    </div>
+                    <input class="player-progress" type="range" min="0" max="100" value="0" step="0.1" data-player-progress aria-label="Şarkı ilerleme durumu">
+                </div>
+            </div>
         </div>
-        <button class="player-arrow" id="next_song_button" type="button" aria-label="Sonraki şarkı"><i class="fa fa-angle-right" aria-hidden="true"></i></button>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js"></script>
-<script src="js/supabase-client.js"></script>
-<script src="js/app.js?v=10"></script>
+<script src="assets/js/supabase-config.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/app.js?v=10"></script>
 </body>
 </html>
 

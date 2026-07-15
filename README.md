@@ -1,26 +1,22 @@
 # Music App
 
-Supabase destekli, GitHub Pages uyumlu modern müzik paylaşım platformu.
+Supabase destekli, GitHub Pages uyumlu statik müzik paylaşım platformu.
 
-Bu proje; kullanıcı sistemi, admin paneli, müzik yükleme sistemi ve Supabase Storage entegrasyonu bulunan statik bir müzik uygulamasıdır.
+Bu proje kullanıcı kaydı, giriş sistemi, admin paneli, müzik yükleme akışı ve Supabase Storage entegrasyonu içerir. Supabase ayarı yapılmadığında uygulama `assets/data/songs.json` içindeki statik şarkı listesini kullanır.
 
-## 🌍 Özellikler
+## Özellikler
 
-- Kullanıcı kayıt & giriş sistemi
+- Kullanıcı kayıt ve giriş sistemi
 - Admin paneli
-- Müzik yükleme sistemi
-- Şarkı düzenleme
-- Şarkı gizleme / yayına alma
-- Şarkı silme sistemi
-- Album cover yükleme
+- Müzik yükleme ve onay akışı
+- Şarkı düzenleme, gizleme ve silme
+- Albüm kapağı yükleme
 - Supabase Storage entegrasyonu
 - Responsive tasarım
 - GitHub Pages desteği
-- Tamamen statik frontend mimarisi
+- Statik frontend mimarisi
 
----
-
-# 🚀 Kullanılan Teknolojiler
+## Kullanılan Teknolojiler
 
 <p align="left">
   <img src="https://img.shields.io/badge/HTML-E34F26?style=for-the-badge&logo=html5&logoColor=white">
@@ -30,52 +26,49 @@ Bu proje; kullanıcı sistemi, admin paneli, müzik yükleme sistemi ve Supabase
   <img src="https://img.shields.io/badge/GitHub_Pages-121013?style=for-the-badge&logo=github&logoColor=white">
 </p>
 
----
-
-# 📂 Proje Yapısı
+## Proje Yapısı
 
 ```text
 .
-├── css/
-├── js/
-├── uploaded_music/
-├── uploaded_album/
-├── supabase/
-│   ├── schema.sql
-│   ├── seed-songs.sql
-│   └── admin-actions-policies.sql
+├── .github/
+│   └── workflows/
+├── assets/
+│   ├── css/
+│   ├── data/
+│   ├── images/
+│   ├── js/
+│   └── uploads/
+│       ├── albums/
+│       └── music/
+├── database/
+│   └── supabase/
+│       ├── admin-actions-policies.sql
+│       ├── schema.sql
+│       └── seed-songs.sql
+├── 404.html
+├── admin.html
 ├── index.html
 ├── login.html
-├── admin.html
+├── register.html
+├── search.html
 └── upload.html
 ```
 
----
+## Klasör Mantığı
 
-# ⚙️ GitHub Pages Yayına Alma
+- `assets/css/`: stil dosyaları
+- `assets/js/`: uygulama ve Supabase istemci kodu
+- `assets/images/`: favicon ve varsayılan görseller
+- `assets/data/`: Supabase kapalıyken kullanılan statik veri
+- `assets/uploads/albums/`: eski/statik albüm kapakları
+- `assets/uploads/music/`: eski/statik müzik dosyaları
+- `database/supabase/`: Supabase tablo, policy ve seed SQL dosyaları
 
-## GitHub Desktop ile Yayınlama
+## GitHub Pages Yayına Alma
 
-1. GitHub Desktop açın.
-2. `File > Add local repository` seçeneğine girin.
-3. Proje klasörünü seçin.
-4. Repository GitHub’da yoksa:
-
-```text
-Publish repository
-```
-
-butonuna basın.
-
-5. GitHub repository ayarlarından:
-
-```text
-Settings > Pages
-```
-
-ekranına girin.
-
-6. Aşağıdaki ayarları yapın:
+1. GitHub Desktop ile projeyi ekleyin veya repository olarak yayınlayın.
+2. GitHub repository ayarlarında `Settings > Pages` ekranına girin.
+3. Aşağıdaki ayarları seçin:
 
 ```text
 Deploy from a branch
@@ -83,27 +76,19 @@ Branch: main
 Folder: /root
 ```
 
-7. Kaydedin.
-
-GitHub Pages adresiniz genellikle şu formatta olur:
+GitHub Pages adresi genellikle şu formattadır:
 
 ```text
 https://username.github.io/repository-name/
 ```
 
----
+## Supabase Ayarları
 
-# 🔑 Supabase Ayarları
-
-Projede Supabase bağlantısı hazır şekilde bulunmaktadır.
-
-Yeni bir Supabase projesi kullanacaksanız:
+Supabase bağlantısı için şu dosyayı düzenleyin:
 
 ```text
-js/supabase-config.js
+assets/js/supabase-config.js
 ```
-
-dosyasını düzenleyin.
 
 ```js
 window.MUSIC_SUPABASE_CONFIG = {
@@ -113,39 +98,19 @@ window.MUSIC_SUPABASE_CONFIG = {
 };
 ```
 
-⚠️ Güvenlik nedeniyle:
+Güvenlik notu: `service_role`, secret key ve `.env` dosyalarını GitHub'a yüklemeyin.
 
-- `service_role`
-- `secret key`
-- `.env`
+## Supabase SQL Kurulumu
 
-dosyalarını GitHub’a yüklemeyin.
-
----
-
-# 🛠️ Supabase SQL Kurulumu
-
-Supabase Dashboard üzerinden:
+Supabase Dashboard içindeki SQL Editor ekranında sırasıyla çalıştırın:
 
 ```text
-SQL Editor
+1. database/supabase/schema.sql
+2. database/supabase/seed-songs.sql
+3. database/supabase/admin-actions-policies.sql
 ```
 
-ekranına girin.
-
-Sırasıyla çalıştırın:
-
-```text
-1. supabase/schema.sql
-2. supabase/seed-songs.sql
-3. supabase/admin-actions-policies.sql
-```
-
----
-
-# 👑 Admin Yetkisi Verme
-
-İlk hesabınızı oluşturduktan sonra SQL Editor üzerinden:
+İlk hesabınızı oluşturduktan sonra admin yapmak için:
 
 ```sql
 update public.profiles
@@ -153,23 +118,9 @@ set role = 'admin'
 where email = 'your-email@example.com';
 ```
 
-sorgusunu çalıştırın.
+## Authentication URL Ayarı
 
----
-
-# 🔐 Authentication URL Ayarı
-
-Supabase Dashboard:
-
-```text
-Authentication > URL Configuration
-```
-
-ekranına girin.
-
-GitHub Pages adresinizi ekleyin.
-
-Örnek:
+Supabase Dashboard içinde `Authentication > URL Configuration` bölümüne GitHub Pages adreslerinizi ekleyin:
 
 ```text
 https://username.github.io/repository-name/
@@ -178,68 +129,19 @@ https://username.github.io/repository-name/admin.html
 https://username.github.io/repository-name/upload.html
 ```
 
----
+## Dosya Sistemi
 
-# 🎵 Dosya Sistemi
-
-- Eski müzik dosyaları:
+Statik eski dosyalar repository içinde tutulur:
 
 ```text
-uploaded_music/
+assets/uploads/music/
+assets/uploads/albums/
 ```
 
-- Album cover dosyaları:
+Yeni yüklenen dosyalar Supabase Storage içindeki `music-files` bucket'ına kaydedilir.
 
-```text
-uploaded_album/
-```
+## Lisans
 
-klasörlerinde tutulur.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-Yeni yüklenen dosyalar:
-
-```text
-music-files
-```
-
-Supabase Storage bucket’ına kaydedilir.
-
----
-
-# 📦 Proje Boyutu
-
-- Toplam proje boyutu yaklaşık:
-
-```text
-137 MB
-```
-
-- GitHub yükleme limitleriyle uyumludur.
-- En büyük dosya GitHub’ın 100 MB sınırını aşmaz.
-
----
-
-# 🎯 Proje Amacı
-
-Bu proje;
-
-- Modern müzik platformu geliştirmek
-- Supabase Authentication sistemi kullanmak
-- Storage yönetimini öğrenmek
-- Static frontend mimarisi oluşturmak
-- GitHub Pages üzerinde dinamik yapı kurmak
-
-amacıyla geliştirilmiştir.
-
----
-
-# 📄 License
-
-This project is licensed under the MIT License.
-
-For more details:
-<a href="LICENSE">LICENSE</a>
-
----
-
-Made with ❤️ by Arda Altunel
+Made by Arda Altunel.

@@ -27,11 +27,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          SUPABASE_URL=$(sed -n "s/.*url: '\([^']*\)'.*/\1/p" js/supabase-config.js | head -n 1)
-          SUPABASE_ANON_KEY=$(sed -n "s/.*anonKey: '\([^']*\)'.*/\1/p" js/supabase-config.js | head -n 1)
+          SUPABASE_URL=$(sed -n "s/.*url: '\([^']*\)'.*/\1/p" assets/js/supabase-config.js | head -n 1)
+          SUPABASE_ANON_KEY=$(sed -n "s/.*anonKey: '\([^']*\)'.*/\1/p" assets/js/supabase-config.js | head -n 1)
 
           if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_ANON_KEY" ]]; then
-            echo "Supabase URL or anon key could not be read from js/supabase-config.js" >&2
+            echo "Supabase URL or anon key could not be read from assets/js/supabase-config.js" >&2
             exit 1
           fi
 

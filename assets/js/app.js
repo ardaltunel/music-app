@@ -1,5 +1,5 @@
-const SONG_DATA_URL = 'data/songs.json';
-const DEFAULT_ALBUM = 'images/disc.png';
+const SONG_DATA_URL = 'assets/data/songs.json';
+const DEFAULT_ALBUM = 'assets/images/disc.png';
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const THEME_STORAGE_KEY = 'music-theme';
 
@@ -30,6 +30,14 @@ const playerAlbum = player?.querySelector('.album');
 const playerName = player?.querySelector('.name');
 const playerArtist = player?.querySelector('.artist');
 const audio = player?.querySelector('.music');
+const playerToggleButton = player?.querySelector('[data-player-toggle]');
+const playerProgress = player?.querySelector('[data-player-progress]');
+const playerCurrentTime = player?.querySelector('[data-current-time]');
+const playerDuration = player?.querySelector('[data-duration]');
+const playerMuteButton = player?.querySelector('[data-player-mute]');
+const playerVolume = player?.querySelector('[data-player-volume]');
+const playerVolumeGroup = player?.querySelector('.player-volume-group');
+const playerDownload = player?.querySelector('[data-player-download]');
 const prevButton = player?.querySelector('#prev_song_button');
 const nextButton = player?.querySelector('#next_song_button');
 const closeButton = player?.querySelector('#close');
@@ -137,16 +145,108 @@ function localAssetPath(folder, fileName) {
     return fileName ? `${folder}/${encodeURIComponent(fileName).replace(/%2F/g, '/')}` : '';
 }
 
+function normalizeAssetUrl(url) {
+    const value = String(url || '');
+    if (value.startsWith('uploaded_album/')) {
+        return value.replace('uploaded_album/', 'assets/uploads/albums/');
+    }
+    if (value.startsWith('uploaded_music/')) {
+        return value.replace('uploaded_music/', 'assets/uploads/music/');
+    }
+    return value;
+}
+
 function songAlbumUrl(song) {
-    return song.albumSrc || song.album_url || storagePublicUrl(song.album_path) || localAssetPath('uploaded_album', song.album) || DEFAULT_ALBUM;
+    return song.albumSrc || normalizeAssetUrl(song.album_url) || storagePublicUrl(song.album_path) || localAssetPath('assets/uploads/albums', song.album) || DEFAULT_ALBUM;
 }
 
 function songMusicUrl(song) {
-    return song.musicSrc || song.music_url || storagePublicUrl(song.music_path) || localAssetPath('uploaded_music', song.music);
+    return song.musicSrc || normalizeAssetUrl(song.music_url) || storagePublicUrl(song.music_path) || localAssetPath('assets/uploads/music', song.music);
 }
 
 function getSongDownloadName(song) {
     return song.music || song.music_path?.split('/').pop() || `${song.name || 'music'}.mp3`;
+}
+
+function formatDuration(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${remainingSeconds}`;
+}
+
+function setRangeFill(range, percent) {
+    if (!range) return;
+    const clamped = Math.max(0, Math.min(100, percent));
+    range.style.background = `linear-gradient(90deg, var(--main-color) ${clamped}%, rgba(255, 255, 255, .18) ${clamped}%)`;
+}
+
+function updatePlayerToggle() {
+    if (!playerToggleButton || !audio) return;
+    const isPlaying = !audio.paused;
+    playerToggleButton.setAttribute('aria-label', isPlaying ? 'Duraklat' : 'Oynat');
+    playerToggleButton.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+}
+
+function updatePlayerProgress() {
+    if (!audio || !playerProgress) return;
+    const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+    const percent = duration ? (audio.currentTime / duration) * 100 : 0;
+    playerProgress.value = String(percent);
+    if (playerCurrentTime) playerCurrentTime.textContent = formatDuration(audio.currentTime);
+    if (playerDuration) playerDuration.textContent = formatDuration(duration);
+    setRangeFill(playerProgress, percent);
+}
+
+function updatePlayerVolume() {
+    if (!audio) return;
+    const effectiveVolume = audio.muted ? 0 : audio.volume;
+    if (playerVolume) {
+        playerVolume.value = String(effectiveVolume);
+        setRangeFill(playerVolume, effectiveVolume * 100);
+    }
+    if (playerMuteButton) {
+        const muted = audio.muted || audio.volume === 0;
+        playerMuteButton.setAttribute('aria-label', muted ? 'Sesi aç' : 'Sesi kapat');
+        playerMuteButton.innerHTML = muted
+            ? '<i class="fas fa-volume-xmark"></i>'
+            : '<i class="fas fa-volume-high"></i>';
+    }
+}
+
+function bindPlayerVolumeGroup() {
+    if (!playerVolumeGroup) return;
+    const closeVolumeGroup = () => {
+        if (playerVolumeGroup.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+        playerVolumeGroup.classList.remove('is-open');
+    };
+    playerVolumeGroup.addEventListener('mouseenter', () => {
+        playerVolumeGroup.classList.add('is-open');
+    });
+    playerVolumeGroup.addEventListener('mouseleave', closeVolumeGroup);
+    document.addEventListener('mousemove', (event) => {
+        const rect = playerVolumeGroup.getBoundingClientRect();
+        const outside = event.clientX < rect.left
+            || event.clientX > rect.right
+            || event.clientY < rect.top
+            || event.clientY > rect.bottom;
+
+        if (outside) {
+            closeVolumeGroup();
+        }
+    });
+    playerVolumeGroup.addEventListener('focusin', () => {
+        playerVolumeGroup.classList.add('is-open');
+    });
+    playerVolumeGroup.addEventListener('focusout', () => {
+        setTimeout(() => {
+            if (!playerVolumeGroup.contains(document.activeElement)) {
+                playerVolumeGroup.classList.remove('is-open');
+            }
+        }, 0);
+    });
 }
 
 async function initSession() {
@@ -336,6 +436,7 @@ function playSong(index) {
     if (!song || !player || !audio) return;
 
     activeIndex = index;
+    const musicUrl = songMusicUrl(song);
     playerAlbum.src = songAlbumUrl(song);
     playerAlbum.alt = song.name;
     playerAlbum.onerror = () => {
@@ -343,10 +444,16 @@ function playSong(index) {
     };
     playerName.textContent = song.name;
     playerArtist.textContent = song.artist || 'Sanatçı belirtilmedi';
-    audio.src = songMusicUrl(song);
+    audio.src = musicUrl;
+    if (playerDownload) {
+        playerDownload.href = musicUrl;
+        playerDownload.download = getSongDownloadName(song);
+    }
+    updatePlayerProgress();
+    updatePlayerVolume();
     player.classList.add('active');
     player.setAttribute('aria-hidden', 'false');
-    audio.play();
+    audio.play().catch(() => updatePlayerToggle());
 }
 
 function playRelative(direction) {
@@ -360,6 +467,7 @@ function closePlayer() {
     player.classList.remove('active');
     player.setAttribute('aria-hidden', 'true');
     audio.pause();
+    updatePlayerToggle();
 }
 
 function wireSearch() {
@@ -391,7 +499,7 @@ function wirePasswordToggles() {
 
 function requireConfiguredAuth() {
     if (isSupabaseReady()) return true;
-    showMessage('Supabase bağlantısı henüz ayarlanmadı. js/supabase-config.js dosyasını doldurmalısın.', 'warning');
+    showMessage('Supabase bağlantısı henüz ayarlanmadı. assets/js/supabase-config.js dosyasını doldurmalısın.', 'warning');
     return false;
 }
 
@@ -518,7 +626,7 @@ async function handleUploadPage() {
         form.querySelectorAll('input,button[type="submit"]').forEach((item) => {
             item.disabled = true;
         });
-        showMessage('Supabase bağlantısı henüz ayarlanmadı. js/supabase-config.js dosyasını doldurmalısın.', 'warning');
+        showMessage('Supabase bağlantısı henüz ayarlanmadı. assets/js/supabase-config.js dosyasını doldurmalısın.', 'warning');
         return;
     }
 
@@ -840,10 +948,44 @@ document.addEventListener('keydown', (event) => {
 
 prevButton?.addEventListener('click', () => playRelative(-1));
 nextButton?.addEventListener('click', () => playRelative(1));
+playerToggleButton?.addEventListener('click', async () => {
+    if (!audio?.src) return;
+    if (audio.paused) {
+        await audio.play().catch(() => {});
+    } else {
+        audio.pause();
+    }
+    updatePlayerToggle();
+});
+playerProgress?.addEventListener('input', () => {
+    if (!audio || !Number.isFinite(audio.duration) || !audio.duration) return;
+    audio.currentTime = (Number(playerProgress.value) / 100) * audio.duration;
+    updatePlayerProgress();
+});
+playerMuteButton?.addEventListener('click', () => {
+    if (!audio) return;
+    audio.muted = !audio.muted;
+    updatePlayerVolume();
+});
+playerVolume?.addEventListener('input', () => {
+    if (!audio) return;
+    audio.volume = Number(playerVolume.value);
+    audio.muted = audio.volume === 0;
+    updatePlayerVolume();
+});
+audio?.addEventListener('loadedmetadata', updatePlayerProgress);
+audio?.addEventListener('timeupdate', updatePlayerProgress);
+audio?.addEventListener('play', updatePlayerToggle);
+audio?.addEventListener('pause', updatePlayerToggle);
+audio?.addEventListener('volumechange', updatePlayerVolume);
 audio?.addEventListener('ended', () => playRelative(1));
 closeButton?.addEventListener('click', closePlayer);
 player?.addEventListener('click', (event) => {
     if (event.target === player) closePlayer();
 });
+
+updatePlayerVolume();
+updatePlayerToggle();
+bindPlayerVolumeGroup();
 
 init();
