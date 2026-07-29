@@ -1,22 +1,22 @@
 # Music App
 
-Supabase destekli, GitHub Pages uyumlu statik müzik paylaşım platformu.
+A static music-sharing platform powered by Supabase and compatible with GitHub Pages.
 
-Bu proje kullanıcı kaydı, giriş sistemi, admin paneli, müzik yükleme akışı ve Supabase Storage entegrasyonu içerir. Supabase ayarı yapılmadığında uygulama `assets/data/songs.json` içindeki statik şarkı listesini kullanır.
+This project includes user registration, authentication, an admin panel, a music upload workflow, and Supabase Storage integration. When Supabase is not configured, the application uses the static song list located in `assets/data/songs.json`.
 
-## Özellikler
+## Features
 
-- Kullanıcı kayıt ve giriş sistemi
-- Admin paneli
-- Müzik yükleme ve onay akışı
-- Şarkı düzenleme, gizleme ve silme
-- Albüm kapağı yükleme
-- Supabase Storage entegrasyonu
-- Responsive tasarım
-- GitHub Pages desteği
-- Statik frontend mimarisi
+* User registration and login system
+* Admin panel
+* Music upload and approval workflow
+* Song editing, hiding, and deletion
+* Album cover uploads
+* Supabase Storage integration
+* Responsive design
+* GitHub Pages support
+* Static frontend architecture
 
-## Kullanılan Teknolojiler
+## Technologies Used
 
 <p align="left">
   <img src="https://img.shields.io/badge/HTML-E34F26?style=for-the-badge&logo=html5&logoColor=white">
@@ -26,7 +26,7 @@ Bu proje kullanıcı kaydı, giriş sistemi, admin paneli, müzik yükleme akı�
   <img src="https://img.shields.io/badge/GitHub_Pages-121013?style=for-the-badge&logo=github&logoColor=white">
 </p>
 
-## Proje Yapısı
+## Project Structure
 
 ```text
 .
@@ -54,37 +54,37 @@ Bu proje kullanıcı kaydı, giriş sistemi, admin paneli, müzik yükleme akı�
 └── upload.html
 ```
 
-## Klasör Mantığı
+## Directory Overview
 
-- `assets/css/`: stil dosyaları
-- `assets/js/`: uygulama ve Supabase istemci kodu
-- `assets/images/`: favicon ve varsayılan görseller
-- `assets/data/`: Supabase kapalıyken kullanılan statik veri
-- `assets/uploads/albums/`: eski/statik albüm kapakları
-- `assets/uploads/music/`: eski/statik müzik dosyaları
-- `database/supabase/`: Supabase tablo, policy ve seed SQL dosyaları
+* `assets/css/`: Stylesheets
+* `assets/js/`: Application logic and Supabase client code
+* `assets/images/`: Favicons and default images
+* `assets/data/`: Static data used when Supabase is not configured
+* `assets/uploads/albums/`: Legacy or static album cover files
+* `assets/uploads/music/`: Legacy or static music files
+* `database/supabase/`: Supabase table definitions, policies, and seed SQL files
 
-## GitHub Pages Yayına Alma
+## Deploying to GitHub Pages
 
-1. GitHub Desktop ile projeyi ekleyin veya repository olarak yayınlayın.
-2. GitHub repository ayarlarında `Settings > Pages` ekranına girin.
-3. Aşağıdaki ayarları seçin:
+1. Add the project through GitHub Desktop or publish it as a GitHub repository.
+2. Open `Settings > Pages` in the GitHub repository.
+3. Select the following options:
 
 ```text
-Deploy from a branch
+Source: Deploy from a branch
 Branch: main
 Folder: /root
 ```
 
-GitHub Pages adresi genellikle şu formattadır:
+The GitHub Pages URL will usually follow this format:
 
 ```text
 https://username.github.io/repository-name/
 ```
 
-## Supabase Ayarları
+## Supabase Configuration
 
-Supabase bağlantısı için şu dosyayı düzenleyin:
+Edit the following file to configure the Supabase connection:
 
 ```text
 assets/js/supabase-config.js
@@ -98,11 +98,11 @@ window.MUSIC_SUPABASE_CONFIG = {
 };
 ```
 
-Güvenlik notu: `service_role`, secret key ve `.env` dosyalarını GitHub'a yüklemeyin.
+> **Security Notice:** Never upload your `service_role` key, secret keys, or `.env` files to GitHub.
 
-## Supabase SQL Kurulumu
+## Supabase SQL Setup
 
-Supabase Dashboard içindeki SQL Editor ekranında sırasıyla çalıştırın:
+Run the following files in the Supabase Dashboard SQL Editor in the specified order:
 
 ```text
 1. database/supabase/schema.sql
@@ -110,17 +110,17 @@ Supabase Dashboard içindeki SQL Editor ekranında sırasıyla çalıştırın:
 3. database/supabase/admin-actions-policies.sql
 ```
 
-İlk hesabınızı oluşturduktan sonra admin yapmak için:
+After creating your first account, run the following query to assign administrator privileges:
 
 ```sql
-update public.profiles
-set role = 'admin'
-where email = 'your-email@example.com';
+UPDATE public.profiles
+SET role = 'admin'
+WHERE email = 'your-email@example.com';
 ```
 
-## Authentication URL Ayarı
+## Authentication URL Configuration
 
-Supabase Dashboard içinde `Authentication > URL Configuration` bölümüne GitHub Pages adreslerinizi ekleyin:
+In the Supabase Dashboard, open `Authentication > URL Configuration` and add your GitHub Pages URLs:
 
 ```text
 https://username.github.io/repository-name/
@@ -129,19 +129,17 @@ https://username.github.io/repository-name/admin.html
 https://username.github.io/repository-name/upload.html
 ```
 
-## Dosya Sistemi
+## File Storage
 
-Statik eski dosyalar repository içinde tutulur:
+Legacy static files are stored directly in the repository:
 
 ```text
 assets/uploads/music/
 assets/uploads/albums/
 ```
 
-Yeni yüklenen dosyalar Supabase Storage içindeki `music-files` bucket'ına kaydedilir.
+Newly uploaded files are stored in the `music-files` bucket in Supabase Storage.
 
-## Lisans
+## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
-Made by Arda Altunel.
+This project is licensed under the [MIT License](LICENSE).
