@@ -142,4 +142,8 @@ Newly uploaded files are stored in the `music-files` bucket in Supabase Storage.
 
 ## License
 
+<<<<<<< Updated upstream
 This project is licensed under the [MIT License](LICENSE).
+=======
+This project is licensed under the [MIT License](LICENSE).
+>>>>>>> Stashed changes
