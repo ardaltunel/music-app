@@ -12,6 +12,7 @@ This project includes user registration, authentication, an admin panel, a music
 * Song editing, hiding, and deletion
 * Album cover uploads
 * Supabase Storage integration
+* YouTube search fallback with the official embedded player
 * Responsive design
 * GitHub Pages support
 * Static frontend architecture
@@ -140,10 +141,36 @@ assets/uploads/albums/
 
 Newly uploaded files are stored in the `music-files` bucket in Supabase Storage.
 
+## YouTube Search Fallback
+
+When a search has no match in the local `songs` catalog, the search page calls the `youtube-search` Supabase Edge Function and displays embeddable YouTube music results. YouTube videos are played with the official visible iframe player and are never downloaded or copied into Storage.
+
+1. In Google Cloud Console, enable **YouTube Data API v3** and create an API key. Restrict the key to the YouTube Data API.
+2. Authenticate and link the Supabase CLI:
+
+```text
+npx supabase login
+npx supabase link --project-ref zgqjzsueslitzyewoqwc
+```
+
+3. Store the API key as an Edge Function secret. Do not add it to `assets/js/supabase-config.js` or commit it to Git:
+
+```text
+npx supabase secrets set YOUTUBE_API_KEY=YOUR_YOUTUBE_API_KEY
+```
+
+4. Deploy the public search function:
+
+```text
+npx supabase functions deploy youtube-search --no-verify-jwt --use-api
+```
+
+The function accepts the production GitHub Pages origin and localhost by default. If the site later uses a custom domain, add it as a comma-separated secret before deploying:
+
+```text
+npx supabase secrets set ALLOWED_ORIGINS=https://music.example.com
+```
+
 ## License
 
-<<<<<<< Updated upstream
 This project is licensed under the [MIT License](LICENSE).
-=======
-This project is licensed under the [MIT License](LICENSE).
->>>>>>> Stashed changes

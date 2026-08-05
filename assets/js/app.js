@@ -2,12 +2,17 @@ const SONG_DATA_URL = 'assets/data/songs.json';
 const DEFAULT_ALBUM = 'assets/images/disc.png';
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const THEME_STORAGE_KEY = 'music-theme';
+const YOUTUBE_SEARCH_FUNCTION = 'youtube-search';
+const YOUTUBE_CACHE_TTL_MS = 15 * 60 * 1000;
+const YOUTUBE_CACHE_PREFIX = 'music-youtube-search:';
 
 let allSongs = [];
 let visibleSongs = [];
 let activeIndex = -1;
 let currentSession = null;
 let currentProfile = null;
+let youtubeFallbackActive = false;
+let youtubeFallbackFailed = false;
 
 const page = document.body.dataset.page || 'home';
 const params = new URLSearchParams(window.location.search);
@@ -38,6 +43,8 @@ const playerMuteButton = player?.querySelector('[data-player-mute]');
 const playerVolume = player?.querySelector('[data-player-volume]');
 const playerVolumeGroup = player?.querySelector('.player-volume-group');
 const playerDownload = player?.querySelector('[data-player-download]');
+const nativePlayerControls = player?.querySelector('[data-native-player]');
+const youtubePlayer = player?.querySelector('[data-youtube-player]');
 const prevButton = player?.querySelector('#prev_song_button');
 const nextButton = player?.querySelector('#next_song_button');
 const closeButton = player?.querySelector('#close');
@@ -143,6 +150,93 @@ function storagePublicUrl(path) {
 
 function localAssetPath(folder, fileName) {
     return fileName ? `${folder}/${encodeURIComponent(fileName).replace(/%2F/g, '/')}` : '';
+}
+
+function isYoutubeSong(song) {
+    return song?.source === 'youtube' && /^[a-zA-Z0-9_-]{11}$/.test(song.provider_id || '');
+}
+
+function decodeHtmlEntities(value) {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = String(value || '');
+    return textarea.value;
+}
+
+function youtubeCacheKey(query) {
+    return `${YOUTUBE_CACHE_PREFIX}${normalizeText(query)}`;
+}
+
+function readYoutubeCache(query) {
+    try {
+        const cached = JSON.parse(localStorage.getItem(youtubeCacheKey(query)) || 'null');
+        if (!cached || Date.now() - cached.savedAt > YOUTUBE_CACHE_TTL_MS || !Array.isArray(cached.items)) {
+            return null;
+        }
+        return cached.items;
+    } catch {
+        return null;
+    }
+}
+
+function writeYoutubeCache(query, items) {
+    try {
+        localStorage.setItem(youtubeCacheKey(query), JSON.stringify({ savedAt: Date.now(), items }));
+    } catch {
+        // Search still works when browser storage is unavailable.
+    }
+}
+
+function normalizeYoutubeSong(item) {
+    const providerId = String(item?.provider_id || '');
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(providerId)) return null;
+
+    return {
+        id: `youtube:${providerId}`,
+        source: 'youtube',
+        provider_id: providerId,
+        name: decodeHtmlEntities(item.name),
+        artist: decodeHtmlEntities(item.artist) || 'YouTube',
+        album_url: item.album_url || DEFAULT_ALBUM,
+        external_url: `https://www.youtube.com/watch?v=${providerId}`
+    };
+}
+
+async function searchYoutube(query) {
+    const cached = readYoutubeCache(query);
+    if (cached) return cached.map(normalizeYoutubeSong).filter(Boolean);
+
+    let data;
+    if (isSupabaseReady()) {
+        const result = await supabaseClient.functions.invoke(YOUTUBE_SEARCH_FUNCTION, {
+            body: { query }
+        });
+        if (result.error) throw new Error(result.error.message || 'YouTube araması tamamlanamadı.');
+        data = result.data;
+    } else {
+        const config = window.MUSIC_SUPABASE_CONFIG || {};
+        const url = String(config.url || '').replace(/\/$/, '');
+        const publishableKey = String(config.anonKey || '');
+        if (!/^https:\/\/.+\.supabase\.co$/i.test(url) || !publishableKey) {
+            throw new Error('YouTube araması için Supabase bağlantısı gerekli.');
+        }
+
+        const response = await fetch(`${url}/functions/v1/${YOUTUBE_SEARCH_FUNCTION}`, {
+            method: 'POST',
+            headers: {
+                apikey: publishableKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+        });
+        data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'YouTube araması tamamlanamadı.');
+    }
+
+    if (!Array.isArray(data?.items)) throw new Error('YouTube araması geçersiz yanıt verdi.');
+
+    const items = data.items.map(normalizeYoutubeSong).filter(Boolean);
+    writeYoutubeCache(query, data.items);
+    return items;
 }
 
 function normalizeAssetUrl(url) {
@@ -334,6 +428,12 @@ function createSongCard(song, index) {
     artist.className = 'artist';
     artist.textContent = song.artist || 'Sanatçı belirtilmedi';
 
+    const provider = isYoutubeSong(song) ? document.createElement('span') : null;
+    if (provider) {
+        provider.className = 'provider-badge';
+        provider.innerHTML = '<i class="fab fa-youtube"></i> YouTube sonucu';
+    }
+
     const flex = document.createElement('div');
     flex.className = 'flex';
 
@@ -343,12 +443,20 @@ function createSongCard(song, index) {
     play.innerHTML = '<i class="fas fa-play"></i><span>Oynat</span>';
     play.addEventListener('click', () => playSong(index));
 
-    const download = document.createElement('a');
-    download.href = songMusicUrl(song);
-    download.download = getSongDownloadName(song);
-    download.innerHTML = '<i class="fas fa-download"></i><span>İndir</span>';
+    const secondaryAction = document.createElement('a');
+    if (isYoutubeSong(song)) {
+        secondaryAction.href = song.external_url;
+        secondaryAction.target = '_blank';
+        secondaryAction.rel = 'noopener noreferrer';
+        secondaryAction.innerHTML = '<i class="fab fa-youtube"></i><span>YouTube</span>';
+    } else {
+        secondaryAction.href = songMusicUrl(song);
+        secondaryAction.download = getSongDownloadName(song);
+        secondaryAction.innerHTML = '<i class="fas fa-download"></i><span>İndir</span>';
+    }
 
-    flex.append(play, download);
+    flex.append(play, secondaryAction);
+    if (provider) article.append(provider);
     article.append(img, name, artist, flex);
     return article;
 }
@@ -361,12 +469,14 @@ function createInfoCard(message, actionText = 'Ana Sayfaya Dön', actionHref = '
     text.className = 'empty-state';
     text.textContent = message;
 
-    const action = document.createElement('a');
-    action.className = 'btn';
-    action.href = actionHref;
-    action.textContent = actionText;
-
-    article.append(text, action);
+    article.append(text);
+    if (actionText) {
+        const action = document.createElement('a');
+        action.className = 'btn';
+        action.href = actionHref;
+        action.textContent = actionText;
+        article.append(action);
+    }
     return article;
 }
 
@@ -383,7 +493,9 @@ function renderSongs(songs) {
         grid.append(createSongCard(song, index));
     });
 
-    grid.append(createInfoCard(currentSession ? 'Yeni şarkı yükleyebilirsin.' : 'Şarkı yüklemek için giriş yap.', 'Müzik Ekle', 'upload.html'));
+    if (!youtubeFallbackActive) {
+        grid.append(createInfoCard(currentSession ? 'Yeni şarkı yükleyebilirsin.' : 'Şarkı yüklemek için giriş yap.', 'Müzik Ekle', 'upload.html'));
+    }
 }
 
 function updateSearchHeader() {
@@ -398,8 +510,18 @@ function updateSearchHeader() {
         return;
     }
 
+    if (youtubeFallbackActive) {
+        if (title) title.textContent = 'YouTube Sonuçları';
+        if (summary) summary.textContent = `“${currentSearch}” Music kataloğunda bulunamadı; YouTube sonuçları gösteriliyor.`;
+        return;
+    }
+
     if (title) title.textContent = visibleSongs.length ? 'Arama Sonuçları' : 'Sonuç Bulunamadı';
-    if (summary) summary.textContent = currentSearch;
+    if (summary) {
+        summary.textContent = youtubeFallbackFailed
+            ? `“${currentSearch}” bulunamadı ve YouTube araması şu anda kullanılamıyor.`
+            : currentSearch;
+    }
 }
 
 async function loadSongs() {
@@ -422,6 +544,22 @@ async function loadSongs() {
         }
 
         visibleSongs = currentSearch ? allSongs.filter((song) => matchesSong(song, currentSearch)) : allSongs;
+        youtubeFallbackActive = false;
+        youtubeFallbackFailed = false;
+
+        if (page === 'search' && currentSearch && !visibleSongs.length) {
+            grid.textContent = '';
+            grid.append(createInfoCard('Music kataloğunda bulunamadı. YouTube’da aranıyor…', ''));
+
+            try {
+                visibleSongs = await searchYoutube(currentSearch);
+                youtubeFallbackActive = visibleSongs.length > 0;
+            } catch (youtubeError) {
+                youtubeFallbackFailed = true;
+                console.warn(youtubeError);
+            }
+        }
+
         renderSongs(visibleSongs);
         updateSearchHeader();
     } catch (error) {
@@ -431,29 +569,139 @@ async function loadSongs() {
     }
 }
 
+function clearYoutubePlayer() {
+    if (!youtubePlayer) return;
+    youtubePlayer.replaceChildren();
+    youtubePlayer.classList.remove('is-fallback');
+    youtubePlayer.hidden = true;
+}
+
+function renderYoutubeFallback(song, message) {
+    if (!youtubePlayer) return;
+
+    youtubePlayer.classList.add('is-fallback');
+
+    const fallback = document.createElement('div');
+    fallback.className = 'youtube-fallback';
+
+    const image = document.createElement('img');
+    image.className = 'youtube-fallback-image';
+    image.src = songAlbumUrl(song);
+    image.alt = '';
+
+    const content = document.createElement('div');
+    content.className = 'youtube-fallback-content';
+
+    const icon = document.createElement('span');
+    icon.className = 'youtube-fallback-icon';
+    icon.innerHTML = '<i class="fab fa-youtube" aria-hidden="true"></i>';
+
+    const title = document.createElement('strong');
+    title.textContent = 'Video burada oynatılamıyor';
+
+    const detail = document.createElement('p');
+    detail.textContent = message;
+
+    const link = document.createElement('a');
+    link.href = song.external_url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.innerHTML = '<i class="fab fa-youtube" aria-hidden="true"></i><span>YouTube\'da izle</span>';
+
+    content.append(icon, title, detail, link);
+    fallback.append(image, content);
+    youtubePlayer.replaceChildren(fallback);
+}
+
+function youtubePlayerSource(song) {
+    if (window.location.protocol === 'file:' || window.location.origin === 'null') return '';
+
+    const embedUrl = new URL(`https://www.youtube.com/embed/${song.provider_id}`);
+    embedUrl.searchParams.set('autoplay', '1');
+    embedUrl.searchParams.set('playsinline', '1');
+    embedUrl.searchParams.set('origin', window.location.origin);
+    return embedUrl.toString();
+}
+
+function playYoutubeSong(song) {
+    if (!youtubePlayer) return;
+
+    audio?.pause();
+    audio?.removeAttribute('src');
+    audio?.load();
+
+    if (playerAlbum) playerAlbum.hidden = true;
+    if (nativePlayerControls) nativePlayerControls.hidden = true;
+    youtubePlayer.hidden = false;
+
+    youtubePlayer.classList.remove('is-fallback');
+    const playerSource = youtubePlayerSource(song);
+    if (!playerSource) {
+        renderYoutubeFallback(song, 'Gömülü oynatma için projeyi GitHub Pages veya bir yerel web sunucusu üzerinden açmalısın.');
+        return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.title = `${song.name} - YouTube oynatıcı`;
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    iframe.allowFullscreen = true;
+    iframe.addEventListener('error', () => {
+        renderYoutubeFallback(song, 'Oynatıcı yüklenemedi. Videoyu doğrudan YouTube üzerinde açabilirsin.');
+    }, { once: true });
+    iframe.src = playerSource;
+    youtubePlayer.replaceChildren(iframe);
+}
+
 function playSong(index) {
     const song = visibleSongs[index];
-    if (!song || !player || !audio) return;
+    if (!song || !player) return;
+
+    if (isYoutubeSong(song) && window.location.protocol === 'file:') {
+        const youtubeWindow = window.open(song.external_url, '_blank');
+        if (youtubeWindow) {
+            youtubeWindow.opener = null;
+        } else {
+            window.location.assign(song.external_url);
+        }
+        return;
+    }
 
     activeIndex = index;
-    const musicUrl = songMusicUrl(song);
-    playerAlbum.src = songAlbumUrl(song);
-    playerAlbum.alt = song.name;
-    playerAlbum.onerror = () => {
-        playerAlbum.src = DEFAULT_ALBUM;
-    };
     playerName.textContent = song.name;
     playerArtist.textContent = song.artist || 'Sanatçı belirtilmedi';
-    audio.src = musicUrl;
-    if (playerDownload) {
-        playerDownload.href = musicUrl;
-        playerDownload.download = getSongDownloadName(song);
+
+    if (isYoutubeSong(song)) {
+        playYoutubeSong(song);
+    } else {
+        clearYoutubePlayer();
+        if (playerAlbum) {
+            playerAlbum.hidden = false;
+            playerAlbum.src = songAlbumUrl(song);
+            playerAlbum.alt = song.name;
+            playerAlbum.onerror = () => {
+                playerAlbum.src = DEFAULT_ALBUM;
+            };
+        }
+        if (nativePlayerControls) nativePlayerControls.hidden = false;
+
+        const musicUrl = songMusicUrl(song);
+        audio.src = musicUrl;
+        if (playerDownload) {
+            playerDownload.href = musicUrl;
+            playerDownload.download = getSongDownloadName(song);
+        }
+        updatePlayerProgress();
+        updatePlayerVolume();
     }
-    updatePlayerProgress();
-    updatePlayerVolume();
+
     player.classList.add('active');
     player.setAttribute('aria-hidden', 'false');
-    audio.play().catch(() => updatePlayerToggle());
+    document.body.classList.add('modal-open');
+
+    if (!isYoutubeSong(song)) {
+        audio.play().catch(() => updatePlayerToggle());
+    }
 }
 
 function playRelative(direction) {
@@ -463,10 +711,12 @@ function playRelative(direction) {
 }
 
 function closePlayer() {
-    if (!player || !audio) return;
+    if (!player) return;
     player.classList.remove('active');
     player.setAttribute('aria-hidden', 'true');
-    audio.pause();
+    document.body.classList.remove('modal-open');
+    audio?.pause();
+    clearYoutubePlayer();
     updatePlayerToggle();
 }
 
@@ -944,6 +1194,7 @@ adminEditPanel?.addEventListener('click', (event) => {
 });
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && adminEditPanel && !adminEditPanel.hidden) closeAdminEdit();
+    if (event.key === 'Escape' && player?.classList.contains('active')) closePlayer();
 });
 
 prevButton?.addEventListener('click', () => playRelative(-1));

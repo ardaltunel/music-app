@@ -3,13 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="description" content="Arda Altunel Music playlist">
     <meta name="google-site-verification" content="WhMumUYTcsUfTcXBMlek_AFSOMQFO66puERKoP0kpbE">
     <title>Music App | Arda Altunel</title>
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-icon-180x180.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css?v=4">
+    <link rel="stylesheet" href="assets/css/style.css?v=7">
     <link rel="stylesheet" href="assets/css/overscroll-fix.css">
 </head>
 <body data-page="home">
@@ -41,14 +42,19 @@
     </div>
 </section>
 
-<div class="music-player" id="myModal" aria-hidden="true">
-    <i class="fas fa-times" id="close" role="button" aria-label="Kapat"></i>
+<div class="music-player" id="myModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="player-title">
     <div class="main-box">
         <div class="box box-custom">
+            <button class="player-close" id="close" type="button" aria-label="Oynatıcıyı kapat">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <div class="player-heading">
+                <div class="name" id="player-title"></div>
+                <div class="artist"></div>
+            </div>
             <img src="" class="album" alt="">
-            <div class="name"></div>
-            <div class="artist"></div>
-            <div class="player-controls">
+            <div class="youtube-player" data-youtube-player hidden></div>
+            <div class="player-controls" data-native-player>
                 <audio src="" class="music" id="myAudio" preload="metadata"></audio>
                 <div class="player-control-row">
                     <div class="player-volume-group">
@@ -87,7 +93,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/app.js?v=10"></script>
+<script src="assets/js/app.js?v=12"></script>
 </body>
 </html>
 

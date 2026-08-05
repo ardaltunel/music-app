@@ -5,6 +5,7 @@ Desktop.ini
 .env.*
 !.env.example
 node_modules/
+supabase/.temp/
 dist/
 build/
 *.log

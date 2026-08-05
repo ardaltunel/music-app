@@ -1,0 +1,4 @@
+project_id = "music"
+
+[functions.youtube-search]
+verify_jwt = false
