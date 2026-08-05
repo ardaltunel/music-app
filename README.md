@@ -4,6 +4,16 @@ A static music-sharing platform powered by Supabase and compatible with GitHub P
 
 This project includes user registration, authentication, an admin panel, a music upload workflow, and Supabase Storage integration. When Supabase is not configured, the application uses the static song list located in `assets/data/songs.json`.
 
+---
+
+# 📸 Preview
+
+<p align="center">
+  <img width="1891" height="900" alt="Music application preview" src="https://github.com/user-attachments/assets/05c07c4d-eecf-4318-8f9f-4e5535f92f41" />
+</p>
+
+---
+
 ## Features
 
 * User registration and login system
