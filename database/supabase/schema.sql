@@ -52,7 +52,13 @@ begin
     insert into public.profiles (id, name, email, role)
     values (
         new.id,
-        coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1), ''),
+        coalesce(
+            nullif(new.raw_user_meta_data->>'name', ''),
+            nullif(new.raw_user_meta_data->>'full_name', ''),
+            nullif(new.raw_user_meta_data->>'user_name', ''),
+            split_part(new.email, '@', 1),
+            ''
+        ),
         coalesce(new.email, ''),
         'user'
     )

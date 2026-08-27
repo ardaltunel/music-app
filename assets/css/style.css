@@ -268,6 +268,7 @@ section {
 
 .btn:disabled,
 .option-btn:disabled,
+.google-auth-btn:disabled,
 .nav-button:disabled {
     cursor: not-allowed;
     opacity: .65;
@@ -383,6 +384,60 @@ section {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin: 1.5rem 0 .5rem;
+    color: var(--light-color);
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+}
+
+.google-auth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    min-height: 4.6rem;
+    margin-top: 1rem;
+    padding: 1.1rem 1.6rem;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f1f1f;
+    cursor: pointer;
+    font-size: 1.55rem;
+    font-weight: 700;
+    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.google-auth-btn:hover {
+    border-color: #c6dafc;
+    background: #f8faff;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, .2);
+}
+
+.google-auth-btn:focus-visible {
+    border-color: #4285f4;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, .2);
+}
+
+.google-auth-btn svg {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
 }
 
 .playlist .box-container .box .artist {

@@ -140,6 +140,29 @@ https://username.github.io/repository-name/admin.html
 https://username.github.io/repository-name/upload.html
 ```
 
+## Google Authentication
+
+Google ile giriş ve kayıt özelliğini etkinleştirmek için:
+
+1. Google Cloud Console'da bir **Web application** OAuth istemcisi oluşturun.
+2. Google istemcisinin **Authorized redirect URIs** listesine Supabase geri çağırma adresini ekleyin:
+
+   ```text
+   https://zgqjzsueslitzyewoqwc.supabase.co/auth/v1/callback
+   ```
+
+3. Supabase Dashboard'da `Authentication > Providers > Google` bölümünden sağlayıcıyı etkinleştirip Google Client ID ve Client Secret değerlerini kaydedin.
+4. Supabase Dashboard'da `Authentication > URL Configuration > Redirect URLs` listesine şu adresleri ekleyin:
+
+   ```text
+   https://ardaltunel.github.io/music/login.html
+   https://ardaltunel.github.io/music/register.html
+   http://localhost:8000/login.html
+   http://localhost:8000/register.html
+   ```
+
+Google OAuth hem mevcut kullanıcıların girişini hem de ilk kez gelen kullanıcıların kaydını aynı güvenli akış üzerinden tamamlar. Mevcut bir Supabase kurulumunda Google profil adının `profiles.name` alanına aktarılması için `database/supabase/google-auth-profile.sql` dosyasını SQL Editor'da bir kez çalıştırın. Yeni kurulumlarda bu destek zaten `schema.sql` içindedir.
+
 ## File Storage
 
 Legacy static files are stored directly in the repository:

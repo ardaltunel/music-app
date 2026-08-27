@@ -760,14 +760,71 @@ function requireLogin() {
     return false;
 }
 
+function safeNextDestination(value) {
+    const fallback = new URL('index.html', window.location.href);
+    if (!value) return fallback.href;
+
+    try {
+        const destination = new URL(value, window.location.href);
+        const siteDirectory = new URL('./', window.location.href);
+        const isSameSitePage = destination.origin === window.location.origin
+            && destination.pathname.startsWith(siteDirectory.pathname);
+
+        return isSameSitePage ? destination.href : fallback.href;
+    } catch {
+        return fallback.href;
+    }
+}
+
+function oauthRedirectUrl() {
+    const redirect = new URL(window.location.href);
+    redirect.search = '';
+    redirect.hash = '';
+    redirect.searchParams.set('next', safeNextDestination(params.get('next')));
+    return redirect.href;
+}
+
+function bindGoogleAuth(form) {
+    const button = form.querySelector('[data-google-auth]');
+    if (!button) return;
+
+    button.addEventListener('click', async () => {
+        if (!requireConfiguredAuth()) return;
+
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+
+        try {
+            const { error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: oauthRedirectUrl()
+                }
+            });
+
+            if (error) throw error;
+        } catch (error) {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+            showMessage(error.message || 'Google ile devam edilemedi. Lütfen tekrar deneyin.', 'error');
+        }
+    });
+}
+
 async function handleLoginPage() {
     const form = document.querySelector('[data-login-form]');
     if (!form) return;
 
     if (!requireConfiguredAuth()) return;
     if (currentSession) {
-        window.location.href = 'index.html';
+        window.location.href = safeNextDestination(params.get('next'));
         return;
+    }
+
+    bindGoogleAuth(form);
+
+    if (params.get('error')) {
+        showMessage('Google ile giriş tamamlanamadı. Lütfen tekrar deneyin.', 'error');
     }
 
     form.addEventListener('submit', async (event) => {
@@ -786,7 +843,7 @@ async function handleLoginPage() {
             return;
         }
 
-        window.location.href = params.get('next') || 'index.html';
+        window.location.href = safeNextDestination(params.get('next'));
     });
 }
 
@@ -796,8 +853,14 @@ async function handleRegisterPage() {
 
     if (!requireConfiguredAuth()) return;
     if (currentSession) {
-        window.location.href = 'index.html';
+        window.location.href = safeNextDestination(params.get('next'));
         return;
+    }
+
+    bindGoogleAuth(form);
+
+    if (params.get('error')) {
+        showMessage('Google ile kayıt tamamlanamadı. Lütfen tekrar deneyin.', 'error');
     }
 
     form.addEventListener('submit', async (event) => {
