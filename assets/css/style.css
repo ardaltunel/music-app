@@ -372,7 +372,6 @@ section {
 }
 
 .playlist .box-container .box .name {
-    min-height: 4.5rem;
     padding: 0 1.4rem;
     font-size: 1.8rem;
     line-height: 1.25;
