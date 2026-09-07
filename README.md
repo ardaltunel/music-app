@@ -206,4 +206,25 @@ npx supabase secrets set ALLOWED_ORIGINS=https://music.example.com
 
 ## License
 
+## Supabase health automation
+
+`.github/workflows/supabase-keep-alive.yml` checks the public `songs` table four times daily (02:17, 08:17, 14:17 and 20:17 UTC; 05:17, 11:17, 17:17 and 23:17 in Turkey). It also runs when the health-check code/configuration changes and can be started from GitHub Actions with **Run workflow**.
+
+The check uses the existing publishable key in the `apikey` header, verifies the response is a valid JSON catalogue result, applies a 20-second request timeout and retries transient failures up to four times. No song, profile or Storage data is changed. A failed check produces a failed Actions run and an explanatory run summary; configure GitHub Actions notifications to receive failures.
+
+After a successful check, a separate job records a health snapshot in `.github/maintenance/supabase-health.json` at most once every 30 days. This job alone has repository `contents: write` permission. Its real maintenance commit refreshes repository activity so GitHub's public-repository 60-day inactivity rule does not silently disable the schedule. No empty commits are created, and health-record commits do not retrigger this workflow.
+
+Validate locally with Node 24 (no npm dependencies required):
+
+```text
+node --test .github/scripts/supabase-keep-alive.test.mjs
+node .github/scripts/supabase-keep-alive.mjs
+```
+
+On September 8, 2026, the previous three-day schedule was still enabled and its September 4 run had successfully queried the database. It was not a failed-job issue; insufficient overall activity is the likely explanation, not a proven pause cause. Supabase's Free plan evaluates sufficient database activity over a week, rather than merely whether one request occurred in that week.
+
+**Limits:** this is a best-effort cloud health/keep-alive job, independent of your computer. It cannot guarantee uptime, override Supabase's Free-plan policy, or resume an already paused project using a public API key. A paid Supabase plan is the supported way to avoid automatic inactivity pausing. Branch protection, denied Actions write permissions, GitHub outages, disabled workflows or revoked API keys can still interrupt this system. The monthly snapshot must succeed as well as the database check.
+
+References: [Supabase project pausing](https://supabase.com/docs/guides/platform/free-project-pausing), [GitHub scheduled workflow inactivity](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
+
 This project is licensed under the [MIT License](LICENSE).

@@ -2,9 +2,16 @@ name: Supabase Keep Alive
 
 on:
   schedule:
-    # Run every 3 days to keep the free Supabase project active.
-    - cron: "0 21 */3 * *"
+    # Four real database checks per day; avoid the congested top of the hour.
+    - cron: "17 2,8,14,20 * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/supabase-keep-alive.yml
+      - .github/scripts/supabase-keep-alive.mjs
+      - .github/scripts/supabase-keep-alive.test.mjs
+      - assets/js/supabase-config.js
 
 permissions:
   contents: read
@@ -16,41 +23,70 @@ concurrency:
 jobs:
   ping-supabase:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+            assets/js
 
-      - name: Read Supabase configuration
-        id: config
-        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test health check behavior
+        run: node --test .github/scripts/supabase-keep-alive.test.mjs
+      - name: Verify a real database response
+        run: node .github/scripts/supabase-keep-alive.mjs
+      - name: Explain failure
+        if: failure()
         run: |
-          set -euo pipefail
+          echo '### Supabase health check failed' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No healthy result was recorded. Check project status and API availability. Public API keys cannot resume paused projects.' >> "$GITHUB_STEP_SUMMARY"
 
-          SUPABASE_URL=$(sed -n "s/.*url: '\([^']*\)'.*/\1/p" assets/js/supabase-config.js | head -n 1)
-          SUPABASE_ANON_KEY=$(sed -n "s/.*anonKey: '\([^']*\)'.*/\1/p" assets/js/supabase-config.js | head -n 1)
-
-          if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_ANON_KEY" ]]; then
-            echo "Supabase URL or anon key could not be read from assets/js/supabase-config.js" >&2
-            exit 1
-          fi
-
-          echo "url=$SUPABASE_URL" >> "$GITHUB_OUTPUT"
-          echo "anon_key=$SUPABASE_ANON_KEY" >> "$GITHUB_OUTPUT"
-
-      - name: Query Supabase
-        shell: bash
-        env:
-          SUPABASE_URL: ${{ steps.config.outputs.url }}
-          SUPABASE_ANON_KEY: ${{ steps.config.outputs.anon_key }}
-        run: |
-          set -euo pipefail
-
-          curl --fail-with-body --silent --show-error \
-            --retry 3 \
-            --retry-delay 5 \
-            "$SUPABASE_URL/rest/v1/songs?select=id&limit=1" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY"
-
-          echo "Supabase keep-alive query completed successfully."
+  record-monthly-health:
+    needs: ping-supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    # Only this small, post-success job may update the repository.
+    permissions:
+      contents: write
+    steps:
+      - name: Record verified health at most once every 30 days
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const path = '.github/maintenance/supabase-health.json';
+            const branch = context.payload.repository.default_branch;
+            const repo = { owner: context.repo.owner, repo: context.repo.repo };
+            let previous;
+            try {
+              previous = (await github.rest.repos.getContent({ ...repo, path, ref: branch })).data;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            const now = new Date();
+            if (previous) {
+              const state = JSON.parse(Buffer.from(previous.content, 'base64').toString('utf8'));
+              const age = now.getTime() - Date.parse(state.checked_at);
+              if (age >= 0 && age < 30 * 24 * 60 * 60 * 1000) {
+                core.info('Monthly health record is current; no commit needed.');
+                return;
+              }
+            }
+            const content = JSON.stringify({
+              project_ref: 'zgqjzsueslitzyewoqwc',
+              checked_at: now.toISOString(),
+              database_query: 'healthy',
+              workflow_run: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            }, null, 2) + '\n';
+            await github.rest.repos.createOrUpdateFileContents({
+              ...repo, path, branch,
+              message: 'chore: record monthly Supabase health check',
+              content: Buffer.from(content).toString('base64'),
+              ...(previous ? { sha: previous.sha } : {})
+            });
+            core.info('Recorded successful health check; repository activity is refreshed.');
