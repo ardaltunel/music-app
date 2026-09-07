@@ -1,7 +1,6 @@
 const SONG_DATA_URL = 'assets/data/songs.json';
 const DEFAULT_ALBUM = 'assets/images/disc.png';
-const { normalizeText, safeMediaUrl, validateUpload } = window.MusicCore;
-let modalOpener = null;
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const THEME_STORAGE_KEY = 'music-theme';
 const YOUTUBE_SEARCH_FUNCTION = 'youtube-search';
 const YOUTUBE_CACHE_TTL_MS = 15 * 60 * 1000;
@@ -14,12 +13,10 @@ let currentSession = null;
 let currentProfile = null;
 let youtubeFallbackActive = false;
 let youtubeFallbackFailed = false;
-let adminSongs = [];
-let adminFilter = 'all';
 
 const page = document.body.dataset.page || 'home';
 const params = new URLSearchParams(window.location.search);
-const currentSearch = (params.get('search') || '').trim().slice(0, 100);
+const currentSearch = (params.get('search') || '').trim();
 const backend = window.musicSupabase || { configured: false, client: null, bucket: 'music-files' };
 const supabaseClient = backend.client;
 
@@ -44,6 +41,7 @@ const playerCurrentTime = player?.querySelector('[data-current-time]');
 const playerDuration = player?.querySelector('[data-duration]');
 const playerMuteButton = player?.querySelector('[data-player-mute]');
 const playerVolume = player?.querySelector('[data-player-volume]');
+const playerVolumeGroup = player?.querySelector('.player-volume-group');
 const playerDownload = player?.querySelector('[data-player-download]');
 const nativePlayerControls = player?.querySelector('[data-native-player]');
 const youtubePlayer = player?.querySelector('[data-youtube-player]');
@@ -80,17 +78,16 @@ function applyTheme(theme) {
         button.setAttribute('aria-label', isDark ? 'Açık moda geç' : 'Koyu moda geç');
         button.title = isDark ? 'Açık mod' : 'Koyu mod';
         button.innerHTML = isDark
-            ? '<i aria-hidden="true" class="fas fa-sun"></i><span>Açık</span>'
-            : '<i aria-hidden="true" class="fas fa-moon"></i><span>Koyu</span>';
+            ? '<i class="fas fa-sun"></i><span>Açık</span>'
+            : '<i class="fas fa-moon"></i><span>Koyu</span>';
     });
 }
 
 function themeToggleMarkup() {
-    return '<button class="nav-button theme-toggle" type="button" data-theme-toggle aria-label="Koyu moda geç" title="Koyu mod"><i aria-hidden="true" class="fas fa-moon"></i><span>Koyu</span></button>';
+    return '<button class="nav-button theme-toggle" type="button" data-theme-toggle aria-label="Koyu moda geç" title="Koyu mod"><i class="fas fa-moon"></i><span>Koyu</span></button>';
 }
 
 function bindThemeToggle() {
-    authNav?.querySelectorAll('a, [data-logout]').forEach(link => link.setAttribute('aria-label', link.textContent.trim()));
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
         button.addEventListener('click', () => {
             const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
@@ -102,6 +99,13 @@ function bindThemeToggle() {
 }
 
 applyTheme(preferredTheme());
+
+function normalizeText(value) {
+    return String(value || '')
+        .normalize('NFKD')
+        .replace(/\p{Diacritic}/gu, '')
+        .toLocaleLowerCase('tr-TR');
+}
 
 function matchesSong(song, term) {
     const searchTerm = normalizeText(term);
@@ -123,7 +127,6 @@ function showMessage(message, type = 'info') {
     const item = document.createElement('div');
     item.className = `inline-message inline-message-${type}`;
     item.textContent = message;
-    item.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
     if (messageArea) {
         target.textContent = '';
@@ -166,7 +169,7 @@ function youtubeCacheKey(query) {
 function readYoutubeCache(query) {
     try {
         const cached = JSON.parse(localStorage.getItem(youtubeCacheKey(query)) || 'null');
-        if (!cached || !Number.isFinite(cached.savedAt) || Date.now() - cached.savedAt > YOUTUBE_CACHE_TTL_MS || !Array.isArray(cached.items)) {
+        if (!cached || Date.now() - cached.savedAt > YOUTUBE_CACHE_TTL_MS || !Array.isArray(cached.items)) {
             return null;
         }
         return cached.items;
@@ -177,8 +180,6 @@ function readYoutubeCache(query) {
 
 function writeYoutubeCache(query, items) {
     try {
-        const keys = Object.keys(localStorage).filter(key => key.startsWith(YOUTUBE_CACHE_PREFIX));
-        for (const key of keys.slice(0, Math.max(0, keys.length - 29))) localStorage.removeItem(key);
         localStorage.setItem(youtubeCacheKey(query), JSON.stringify({ savedAt: Date.now(), items }));
     } catch {
         // Search still works when browser storage is unavailable.
@@ -250,11 +251,11 @@ function normalizeAssetUrl(url) {
 }
 
 function songAlbumUrl(song) {
-    return safeMediaUrl(song.albumSrc || normalizeAssetUrl(song.album_url) || storagePublicUrl(song.album_path) || localAssetPath('assets/uploads/albums', song.album), window.location.href) || DEFAULT_ALBUM;
+    return song.albumSrc || normalizeAssetUrl(song.album_url) || storagePublicUrl(song.album_path) || localAssetPath('assets/uploads/albums', song.album) || DEFAULT_ALBUM;
 }
 
 function songMusicUrl(song) {
-    return safeMediaUrl(song.musicSrc || normalizeAssetUrl(song.music_url) || storagePublicUrl(song.music_path) || localAssetPath('assets/uploads/music', song.music), window.location.href);
+    return song.musicSrc || normalizeAssetUrl(song.music_url) || storagePublicUrl(song.music_path) || localAssetPath('assets/uploads/music', song.music);
 }
 
 function getSongDownloadName(song) {
@@ -278,7 +279,7 @@ function updatePlayerToggle() {
     if (!playerToggleButton || !audio) return;
     const isPlaying = !audio.paused;
     playerToggleButton.setAttribute('aria-label', isPlaying ? 'Duraklat' : 'Oynat');
-    playerToggleButton.innerHTML = isPlaying ? '<i aria-hidden="true" class="fas fa-pause"></i>' : '<i aria-hidden="true" class="fas fa-play"></i>';
+    playerToggleButton.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
 }
 
 function updatePlayerProgress() {
@@ -302,15 +303,49 @@ function updatePlayerVolume() {
         const muted = audio.muted || audio.volume === 0;
         playerMuteButton.setAttribute('aria-label', muted ? 'Sesi aç' : 'Sesi kapat');
         playerMuteButton.innerHTML = muted
-            ? '<i aria-hidden="true" class="fas fa-volume-xmark"></i>'
-            : '<i aria-hidden="true" class="fas fa-volume-high"></i>';
+            ? '<i class="fas fa-volume-xmark"></i>'
+            : '<i class="fas fa-volume-high"></i>';
     }
+}
+
+function bindPlayerVolumeGroup() {
+    if (!playerVolumeGroup) return;
+    const closeVolumeGroup = () => {
+        if (playerVolumeGroup.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+        playerVolumeGroup.classList.remove('is-open');
+    };
+    playerVolumeGroup.addEventListener('mouseenter', () => {
+        playerVolumeGroup.classList.add('is-open');
+    });
+    playerVolumeGroup.addEventListener('mouseleave', closeVolumeGroup);
+    document.addEventListener('mousemove', (event) => {
+        const rect = playerVolumeGroup.getBoundingClientRect();
+        const outside = event.clientX < rect.left
+            || event.clientX > rect.right
+            || event.clientY < rect.top
+            || event.clientY > rect.bottom;
+
+        if (outside) {
+            closeVolumeGroup();
+        }
+    });
+    playerVolumeGroup.addEventListener('focusin', () => {
+        playerVolumeGroup.classList.add('is-open');
+    });
+    playerVolumeGroup.addEventListener('focusout', () => {
+        setTimeout(() => {
+            if (!playerVolumeGroup.contains(document.activeElement)) {
+                playerVolumeGroup.classList.remove('is-open');
+            }
+        }, 0);
+    });
 }
 
 async function initSession() {
     if (!isSupabaseReady()) return;
-    const { data, error } = await supabaseClient.auth.getSession();
-    if (error) throw error;
+    const { data } = await supabaseClient.auth.getSession();
     currentSession = data.session || null;
     if (currentSession) {
         currentProfile = await fetchCurrentProfile();
@@ -323,7 +358,6 @@ async function fetchCurrentProfile() {
         .from('profiles')
         .select('id,name,email,role')
         .eq('id', currentSession.user.id)
-        .abortSignal(AbortSignal.timeout(12000))
         .maybeSingle();
 
     if (error) {
@@ -344,8 +378,8 @@ async function renderAuthNav() {
     const links = [];
 
     if (!isSupabaseReady()) {
-        links.unshift('<a href="upload.html"><i aria-hidden="true" class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>');
-        links.push('<a href="login.html"><i aria-hidden="true" class="fas fa-right-to-bracket"></i><span>Giriş</span></a>');
+        links.unshift('<a href="upload.html"><i class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>');
+        links.push('<a href="login.html"><i class="fas fa-right-to-bracket"></i><span>Giriş</span></a>');
         links.push(themeToggleMarkup());
         authNav.innerHTML = links.join('');
         bindThemeToggle();
@@ -353,26 +387,23 @@ async function renderAuthNav() {
     }
 
     if (currentSession) {
-        links.unshift('<a href="upload.html"><i aria-hidden="true" class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>');
+        links.unshift('<a href="upload.html"><i class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>');
         if (isAdmin()) {
-            links.unshift('<a href="admin.html"><i aria-hidden="true" class="fas fa-shield-halved"></i><span>Admin</span></a>');
+            links.unshift('<a href="admin.html"><i class="fas fa-shield-halved"></i><span>Admin</span></a>');
         }
         links.push(`<span class="user-chip">${escapeHtml(currentProfile?.name || currentSession.user.email || 'Kullanıcı')}</span>`);
-        links.push('<button class="nav-button" type="button" data-logout><i aria-hidden="true" class="fas fa-right-from-bracket"></i><span>Çıkış</span></button>');
+        links.push('<button class="nav-button" type="button" data-logout><i class="fas fa-right-from-bracket"></i><span>Çıkış</span></button>');
     } else {
-        links.unshift('<a href="upload.html"><i aria-hidden="true" class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>');
-        links.push('<a href="login.html"><i aria-hidden="true" class="fas fa-right-to-bracket"></i><span>Giriş</span></a>');
+        links.unshift('<a href="upload.html"><i class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>');
+        links.push('<a href="login.html"><i class="fas fa-right-to-bracket"></i><span>Giriş</span></a>');
     }
 
     links.push(themeToggleMarkup());
     authNav.innerHTML = links.join('');
     bindThemeToggle();
-    authNav.querySelector('[data-logout]')?.addEventListener('click', async (event) => {
-        await runFormAction(event.currentTarget, async () => {
-            const { error } = await supabaseClient.auth.signOut();
-            if (error) throw error;
-            window.location.href = 'index.html';
-        });
+    authNav.querySelector('[data-logout]')?.addEventListener('click', async () => {
+        await supabaseClient.auth.signOut();
+        window.location.href = 'index.html';
     });
 }
 
@@ -385,15 +416,11 @@ function createSongCard(song, index) {
     img.alt = song.name;
     img.className = 'album';
     img.loading = 'lazy';
-    img.decoding = 'async';
-    img.width = 400;
-    img.height = 400;
     img.onerror = () => {
-        img.onerror = null;
         img.src = DEFAULT_ALBUM;
     };
 
-    const name = document.createElement('h3');
+    const name = document.createElement('div');
     name.className = 'name';
     name.textContent = song.name;
 
@@ -404,7 +431,7 @@ function createSongCard(song, index) {
     const provider = isYoutubeSong(song) ? document.createElement('span') : null;
     if (provider) {
         provider.className = 'provider-badge';
-        provider.innerHTML = '<i aria-hidden="true" class="fab fa-youtube"></i> YouTube sonucu';
+        provider.innerHTML = '<i class="fab fa-youtube"></i> YouTube sonucu';
     }
 
     const flex = document.createElement('div');
@@ -412,9 +439,8 @@ function createSongCard(song, index) {
 
     const play = document.createElement('button');
     play.type = 'button';
-    play.setAttribute('aria-label', `${song.name} — oynat`);
     play.className = 'play';
-    play.innerHTML = '<i aria-hidden="true" class="fas fa-play"></i><span>Oynat</span>';
+    play.innerHTML = '<i class="fas fa-play"></i><span>Oynat</span>';
     play.addEventListener('click', () => playSong(index));
 
     const secondaryAction = document.createElement('a');
@@ -422,12 +448,11 @@ function createSongCard(song, index) {
         secondaryAction.href = song.external_url;
         secondaryAction.target = '_blank';
         secondaryAction.rel = 'noopener noreferrer';
-        secondaryAction.innerHTML = '<i aria-hidden="true" class="fab fa-youtube"></i><span>YouTube</span>';
+        secondaryAction.innerHTML = '<i class="fab fa-youtube"></i><span>YouTube</span>';
     } else {
         secondaryAction.href = songMusicUrl(song);
         secondaryAction.download = getSongDownloadName(song);
-        secondaryAction.setAttribute('aria-label', `${song.name} — indir`);
-        secondaryAction.innerHTML = '<i aria-hidden="true" class="fas fa-download"></i><span>İndir</span>';
+        secondaryAction.innerHTML = '<i class="fas fa-download"></i><span>İndir</span>';
     }
 
     flex.append(play, secondaryAction);
@@ -460,9 +485,7 @@ function renderSongs(songs) {
     grid.textContent = '';
 
     if (!songs.length) {
-        const count = document.querySelector('[data-song-count]');
-        if (count) count.textContent = '0 şarkı';
-        grid.append(createInfoCard(currentSearch ? 'Bu aramada şarkı bulunamadı. Başka bir şarkı veya sanatçı deneyin.' : 'Henüz yayında şarkı yok. İlk şarkıyı siz paylaşın.', currentSearch ? 'Kütüphaneye dön' : 'Müzik ekle', currentSearch ? 'index.html' : 'upload.html'));
+        grid.append(createInfoCard('Sonuç bulunamadı.'));
         return;
     }
 
@@ -470,10 +493,9 @@ function renderSongs(songs) {
         grid.append(createSongCard(song, index));
     });
 
-    const count = document.querySelector('[data-song-count]');
-    if (count) count.textContent = `${songs.length} şarkı`;
-    const playAll = document.querySelector('[data-play-all]');
-    if (playAll) playAll.disabled = !songs.length;
+    if (!youtubeFallbackActive) {
+        grid.append(createInfoCard(currentSession ? 'Yeni şarkı yükleyebilirsin.' : 'Şarkı yüklemek için giriş yap.', 'Müzik Ekle', 'upload.html'));
+    }
 }
 
 function updateSearchHeader() {
@@ -484,7 +506,7 @@ function updateSearchHeader() {
     if (searchInput) searchInput.value = currentSearch;
     if (!currentSearch) {
         if (title) title.textContent = 'Arama';
-        if (summary) summary.textContent = 'Tüm şarkılar. Şarkı veya sanatçı adına göre arayabilirsiniz.';
+        if (summary) summary.textContent = 'Şarkı veya sanatçı adı yaz.';
         return;
     }
 
@@ -498,28 +520,25 @@ function updateSearchHeader() {
     if (summary) {
         summary.textContent = youtubeFallbackFailed
             ? `“${currentSearch}” bulunamadı ve YouTube araması şu anda kullanılamıyor.`
-            : `“${currentSearch}” için ${visibleSongs.length} şarkı`;
+            : currentSearch;
     }
 }
 
 async function loadSongs() {
     if (!grid) return;
-    grid.setAttribute('aria-busy', 'true');
-    grid.innerHTML = '<p class="empty-state" role="status">Şarkılar yükleniyor…</p>';
 
     try {
         if (isSupabaseReady()) {
             const { data, error } = await supabaseClient
                 .from('songs')
-                .select('id,name,artist,album_path,music_path,album_url,music_url,created_at')
+                .select('*')
                 .eq('status', 'approved')
-                .order('created_at', { ascending: false })
-                .abortSignal(AbortSignal.timeout(12000));
+                .order('created_at', { ascending: false });
 
             if (error) throw error;
             allSongs = data || [];
         } else {
-            const response = await fetch(SONG_DATA_URL, { signal: AbortSignal.timeout(12000) });
+            const response = await fetch(SONG_DATA_URL);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             allSongs = await response.json();
         }
@@ -528,7 +547,7 @@ async function loadSongs() {
         youtubeFallbackActive = false;
         youtubeFallbackFailed = false;
 
-        if (page === 'search' && currentSearch.length >= 2 && currentSearch.length <= 100 && !visibleSongs.length) {
+        if (page === 'search' && currentSearch && !visibleSongs.length) {
             grid.textContent = '';
             grid.append(createInfoCard('Music kataloğunda bulunamadı. YouTube’da aranıyor…', ''));
 
@@ -545,17 +564,8 @@ async function loadSongs() {
         updateSearchHeader();
     } catch (error) {
         grid.textContent = '';
-        const card = createInfoCard('Şarkı listesine ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.', '');
-        const retry = document.createElement('button');
-        retry.type = 'button';
-        retry.className = 'btn';
-        retry.textContent = 'Tekrar dene';
-        retry.addEventListener('click', loadSongs);
-        card.append(retry);
-        grid.append(card);
+        grid.append(createInfoCard('Şarkı listesi yüklenemedi.'));
         console.error(error);
-    } finally {
-        grid.setAttribute('aria-busy', 'false');
     }
 }
 
@@ -657,8 +667,6 @@ function playSong(index) {
         return;
     }
 
-    const opening = !player.classList.contains('active');
-    if (opening) modalOpener = document.activeElement;
     activeIndex = index;
     playerName.textContent = song.name;
     playerArtist.textContent = song.artist || 'Sanatçı belirtilmedi';
@@ -672,7 +680,6 @@ function playSong(index) {
             playerAlbum.src = songAlbumUrl(song);
             playerAlbum.alt = song.name;
             playerAlbum.onerror = () => {
-                playerAlbum.onerror = null;
                 playerAlbum.src = DEFAULT_ALBUM;
             };
         }
@@ -690,7 +697,6 @@ function playSong(index) {
 
     player.classList.add('active');
     player.setAttribute('aria-hidden', 'false');
-    if (opening) closeButton?.focus();
     document.body.classList.add('modal-open');
 
     if (!isYoutubeSong(song)) {
@@ -710,7 +716,6 @@ function closePlayer() {
     player.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
     audio?.pause();
-    modalOpener?.focus();
     clearYoutubePlayer();
     updatePlayerToggle();
 }
@@ -744,7 +749,7 @@ function wirePasswordToggles() {
 
 function requireConfiguredAuth() {
     if (isSupabaseReady()) return true;
-    showMessage('Hesap hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.', 'warning');
+    showMessage('Supabase bağlantısı henüz ayarlanmadı. assets/js/supabase-config.js dosyasını doldurmalısın.', 'warning');
     return false;
 }
 
@@ -783,13 +788,27 @@ function bindGoogleAuth(form) {
     const button = form.querySelector('[data-google-auth]');
     if (!button) return;
 
-    button.addEventListener('click', () => runFormAction(button, async () => {
+    button.addEventListener('click', async () => {
         if (!requireConfiguredAuth()) return;
-        const { error } = await supabaseClient.auth.signInWithOAuth({
-            provider: 'google', options: { redirectTo: oauthRedirectUrl() }
-        });
-        if (error) throw error;
-    }));
+
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+
+        try {
+            const { error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: oauthRedirectUrl()
+                }
+            });
+
+            if (error) throw error;
+        } catch (error) {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+            showMessage(error.message || 'Google ile devam edilemedi. Lütfen tekrar deneyin.', 'error');
+        }
+    });
 }
 
 async function handleLoginPage() {
@@ -811,19 +830,20 @@ async function handleLoginPage() {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const submit = form.querySelector('button[type="submit"]');
-        await runFormAction(submit, async () => {
-            const { error } = await supabaseClient.auth.signInWithPassword({
-                email: form.elements.email.value.trim(),
-                password: form.elements.password.value
-            });
-            if (error) {
-                showMessage(error.status === 400 || error.code === 'invalid_credentials'
-                    ? 'E-posta veya şifre hatalı.'
-                    : 'Giriş yapılamadı. Bağlantınızı kontrol edip tekrar deneyin.', 'error');
-                return;
-            }
-            window.location.href = safeNextDestination(params.get('next'));
+        submit.disabled = true;
+
+        const { error } = await supabaseClient.auth.signInWithPassword({
+            email: form.email.value.trim(),
+            password: form.password.value
         });
+
+        submit.disabled = false;
+        if (error) {
+            showMessage('E-posta veya şifre hatalı.', 'error');
+            return;
+        }
+
+        window.location.href = safeNextDestination(params.get('next'));
     });
 }
 
@@ -845,8 +865,8 @@ async function handleRegisterPage() {
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const password = form.elements.password.value;
-        const passwordConfirm = form.elements.password_confirm.value;
+        const password = form.password.value;
+        const passwordConfirm = form.password_confirm.value;
 
         if (password !== passwordConfirm) {
             showMessage('Şifreler eşleşmiyor.', 'error');
@@ -854,22 +874,30 @@ async function handleRegisterPage() {
         }
 
         const submit = form.querySelector('button[type="submit"]');
-        await runFormAction(submit, async () => {
-            const { data, error } = await supabaseClient.auth.signUp({
-                email: form.elements.email.value.trim(),
-                password,
-                options: { data: { name: form.elements.namedItem('name').value.trim() } }
-            });
-            if (error) {
-                showMessage(error.message || 'Kayıt oluşturulamadı.', 'error');
-                return;
+        submit.disabled = true;
+
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: form.email.value.trim(),
+            password,
+            options: {
+                data: {
+                    name: form.name.value.trim()
+                }
             }
-            if (!data.session) {
-                showMessage('Kayıt oluşturuldu. Hesabınızı doğrulamak için gelen kutunuzu ve spam klasörünüzü kontrol edin.', 'success');
-                return;
-            }
-            window.location.href = safeNextDestination(params.get('next'));
         });
+
+        submit.disabled = false;
+        if (error) {
+            showMessage(error.message || 'Kayıt oluşturulamadı.', 'error');
+            return;
+        }
+
+        if (!data.session) {
+            showMessage('Kayıt oluşturuldu. Supabase e-posta doğrulaması açıksa gelen kutunu kontrol etmelisin.', 'success');
+            return;
+        }
+
+        window.location.href = 'index.html';
     });
 }
 
@@ -880,12 +908,14 @@ function safeFileName(file) {
         .replace(/[^a-zA-Z0-9_-]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .slice(0, 60) || 'file';
-    return `${crypto.randomUUID()}-${base}${extension ? `.${extension}` : ''}`;
+    return `${Date.now()}-${base}${extension ? `.${extension}` : ''}`;
 }
 
 async function uploadStorageFile(file, folder) {
     if (!file) return '';
-    validateUpload(file, folder);
+    if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error('Dosya en fazla 50 MB olabilir.');
+    }
 
     const path = `${currentSession.user.id}/${folder}/${safeFileName(file)}`;
     const { error } = await supabaseClient.storage
@@ -909,7 +939,7 @@ async function handleUploadPage() {
         form.querySelectorAll('input,button[type="submit"]').forEach((item) => {
             item.disabled = true;
         });
-        showMessage('Hesap hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.', 'warning');
+        showMessage('Supabase bağlantısı henüz ayarlanmadı. assets/js/supabase-config.js dosyasını doldurmalısın.', 'warning');
         return;
     }
 
@@ -918,21 +948,17 @@ async function handleUploadPage() {
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (submit.disabled) return;
         submit.disabled = true;
-        submit.setAttribute('aria-busy', 'true');
 
         const uploadedPaths = [];
         try {
-            const musicFile = form.elements.music.files[0];
-            const albumFile = form.elements.album.files[0];
+            const musicFile = form.music.files[0];
+            const albumFile = form.album.files[0];
 
-            if (!form.elements.namedItem('name').value.trim() || !musicFile) {
+            if (!form.name.value.trim() || !musicFile) {
                 throw new Error('Müzik adı ve müzik dosyası zorunludur.');
             }
 
-            validateUpload(musicFile, 'music');
-            if (albumFile) validateUpload(albumFile, 'albums');
             const musicPath = await uploadStorageFile(musicFile, 'music');
             uploadedPaths.push(musicPath);
             const albumPath = albumFile ? await uploadStorageFile(albumFile, 'albums') : '';
@@ -940,8 +966,8 @@ async function handleUploadPage() {
 
             const { error } = await supabaseClient.from('songs').insert({
                 user_id: currentSession.user.id,
-                name: form.elements.namedItem('name').value.trim(),
-                artist: form.elements.artist.value.trim() || 'Sanatçı belirtilmedi',
+                name: form.name.value.trim(),
+                artist: form.artist.value.trim() || 'Sanatçı belirtilmedi',
                 music_path: musicPath,
                 album_path: albumPath || null,
                 status: isAdmin() ? 'approved' : 'pending'
@@ -953,12 +979,11 @@ async function handleUploadPage() {
             form.reset();
         } catch (error) {
             if (uploadedPaths.length) {
-                await cleanupStorage(uploadedPaths);
+                await supabaseClient.storage.from(backend.bucket).remove(uploadedPaths);
             }
             showMessage(error.message || 'Yükleme tamamlanamadı.', 'error');
         } finally {
             submit.disabled = false;
-            submit.removeAttribute('aria-busy');
         }
     });
 }
@@ -996,7 +1021,6 @@ function createAdminSong(song) {
     img.src = songAlbumUrl(song);
     img.alt = song.name;
     img.onerror = () => {
-        img.onerror = null;
         img.src = DEFAULT_ALBUM;
     };
 
@@ -1015,7 +1039,7 @@ function createAdminSong(song) {
     const actions = document.createElement('div');
     actions.className = 'admin-actions';
 
-    actions.append(createAdminAction('Düzenle', 'fa-pen', button => openAdminEdit(song, button)));
+    actions.append(createAdminAction('Düzenle', 'fa-pen', () => openAdminEdit(song)));
 
     if (song.status !== 'approved') {
         actions.append(createAdminAction('Onayla', 'fa-check', () => updateSongStatus(song.id, 'approved')));
@@ -1039,14 +1063,13 @@ function createAdminAction(title, icon, handler, danger = false) {
     const button = document.createElement('button');
     button.type = 'button';
     button.title = title;
-    button.setAttribute('aria-label', title);
     button.className = danger ? 'danger' : '';
-    button.innerHTML = `<i aria-hidden="true" class="fas ${icon}"></i>`;
-    button.addEventListener('click', () => runFormAction(button, () => handler(button)));
+    button.innerHTML = `<i class="fas ${icon}"></i>`;
+    button.addEventListener('click', handler);
     return button;
 }
 
-function openAdminEdit(song, opener = document.activeElement) {
+function openAdminEdit(song) {
     if (!adminEditPanel || !adminEditForm) return;
     const fields = adminEditForm.elements;
     if (adminEditMessage) {
@@ -1054,7 +1077,6 @@ function openAdminEdit(song, opener = document.activeElement) {
         adminEditMessage.textContent = '';
     }
 
-    modalOpener = opener;
     fields.id.value = song.id;
     fields.name.value = song.name || '';
     fields.artist.value = song.artist || '';
@@ -1070,9 +1092,7 @@ function openAdminEdit(song, opener = document.activeElement) {
 
 function closeAdminEdit() {
     if (!adminEditPanel || !adminEditForm) return;
-    if (adminEditForm.querySelector('[type=submit]').disabled) return;
     adminEditForm.reset();
-    modalOpener?.focus();
     adminEditPanel.hidden = true;
     document.body.classList.remove('modal-open');
 }
@@ -1082,9 +1102,7 @@ async function handleAdminEditSubmit(event) {
     if (!adminEditForm || !isAdmin()) return;
 
     const submit = adminEditForm.querySelector('button[type="submit"]');
-    if (submit.disabled) return;
     const uploadedPaths = [];
-    let committed = false;
     submit.disabled = true;
 
     try {
@@ -1107,8 +1125,6 @@ async function handleAdminEditSubmit(event) {
         const musicFile = fields.music.files[0];
         const albumFile = fields.album.files[0];
 
-        if (musicFile) validateUpload(musicFile, 'music');
-        if (albumFile) validateUpload(albumFile, 'albums');
         if (musicFile) {
             updates.music_path = await uploadStorageFile(musicFile, 'music');
             updates.music_url = null;
@@ -1124,24 +1140,23 @@ async function handleAdminEditSubmit(event) {
         const { error } = await supabaseClient
             .from('songs')
             .update(updates)
-            .eq('id', fields.id.value)
-            .select('id').single();
+            .eq('id', fields.id.value);
 
         if (error) throw error;
 
-        committed = true;
         const removePaths = [];
         if (musicFile && fields.current_music_path.value) removePaths.push(fields.current_music_path.value);
         if (albumFile && fields.current_album_path.value) removePaths.push(fields.current_album_path.value);
-        const cleaned = !removePaths.length || await cleanupStorage(removePaths);
+        if (removePaths.length) {
+            await supabaseClient.storage.from(backend.bucket).remove(removePaths);
+        }
 
-        submit.disabled = false;
         closeAdminEdit();
-        showMessage(cleaned ? 'Şarkı güncellendi.' : 'Şarkı güncellendi; bazı eski dosyalar temizlenemedi.', cleaned ? 'success' : 'warning');
+        showMessage('Şarkı güncellendi.', 'success');
         await loadAdminSongs();
     } catch (error) {
-        if (!committed && uploadedPaths.length) {
-            await cleanupStorage(uploadedPaths);
+        if (uploadedPaths.length) {
+            await supabaseClient.storage.from(backend.bucket).remove(uploadedPaths);
         }
         if (adminEditMessage) {
             adminEditMessage.textContent = error.message || 'Şarkı güncellenemedi.';
@@ -1165,9 +1180,8 @@ async function loadAdminSongs() {
 
     const { data, error } = await supabaseClient
         .from('songs')
-        .select('*, profiles(name)')
-        .order('created_at', { ascending: false })
-        .abortSignal(AbortSignal.timeout(12000));
+        .select('*, profiles(name,email)')
+        .order('created_at', { ascending: false });
 
     if (error) {
         adminList.innerHTML = '<article class="admin-song"><div class="admin-song-main"><strong>Şarkılar yüklenemedi.</strong></div></article>';
@@ -1177,39 +1191,18 @@ async function loadAdminSongs() {
 
     adminList.textContent = '';
     if (!data?.length) {
-        adminSongs = [];
-        renderAdminSongs();
         adminList.innerHTML = '<article class="admin-song"><div class="admin-song-main"><strong>Kayıt yok.</strong></div></article>';
         return;
     }
 
-    adminSongs = sortAdminSongs(data);
-    renderAdminSongs();
+    sortAdminSongs(data).forEach((song) => adminList.append(createAdminSong(song)));
 }
-
-function renderAdminSongs() {
-    const filtered = adminSongs.filter(song => adminFilter === 'all' || song.status === adminFilter);
-    adminList.replaceChildren(...filtered.map(createAdminSong));
-    if (!filtered.length) adminList.append(createInfoCard('Bu durumda şarkı yok.', ''));
-    document.querySelectorAll('[data-status-filter]').forEach(button => {
-        const status = button.dataset.statusFilter;
-        const count = status === 'all' ? adminSongs.length : adminSongs.filter(song => song.status === status).length;
-        button.querySelector('span').textContent = count;
-        button.setAttribute('aria-pressed', String(status === adminFilter));
-    });
-}
-
-document.querySelectorAll('[data-status-filter]').forEach(button => button.addEventListener('click', () => {
-    adminFilter = button.dataset.statusFilter;
-    renderAdminSongs();
-}));
 
 async function updateSongStatus(id, status) {
-    if (!isAdmin()) return;
     const { error } = await supabaseClient
         .from('songs')
         .update({ status })
-        .eq('id', id).select('id').single();
+        .eq('id', id);
 
     if (error) {
         showMessage(error.message || 'Durum güncellenemedi.', 'error');
@@ -1221,13 +1214,12 @@ async function updateSongStatus(id, status) {
 }
 
 async function deleteSong(song) {
-    if (!isAdmin()) return;
     if (!window.confirm(`"${song.name}" kalıcı olarak silinsin mi?`)) return;
 
     const { error } = await supabaseClient
         .from('songs')
         .delete()
-        .eq('id', song.id).select('id').single();
+        .eq('id', song.id);
 
     if (error) {
         showMessage(error.message || 'Şarkı silinemedi.', 'error');
@@ -1235,31 +1227,21 @@ async function deleteSong(song) {
     }
 
     const paths = [song.music_path, song.album_path].filter(Boolean);
-    const cleaned = !paths.length || await cleanupStorage(paths);
-    showMessage(cleaned ? 'Şarkı silindi.' : 'Şarkı silindi; bazı dosyalar depolamadan temizlenemedi.', cleaned ? 'success' : 'warning');
+    if (paths.length) {
+        await supabaseClient.storage.from(backend.bucket).remove(paths);
+    }
+
+    showMessage('Şarkı silindi.', 'success');
     await loadAdminSongs();
 }
 
 async function init() {
-    document.querySelectorAll('form:not([data-search-form])').forEach(form => form.addEventListener('submit', event => event.preventDefault()));
-    document.querySelectorAll('.auth-page a[href="login.html"], .auth-page a[href="register.html"]').forEach(link => {
-        if (params.get('next')) link.href += `?next=${encodeURIComponent(safeNextDestination(params.get('next')))}`;
-    });
     wirePasswordToggles();
     wireSearch();
-    const catalogue = (page === 'home' || page === 'search') ? loadSongs() : Promise.resolve();
-    try { await initSession(); } catch { showMessage('Oturum bilgisi alınamadı. Lütfen bağlantınızı kontrol edin.', 'error'); }
+    await initSession();
     await renderAuthNav();
-    supabaseClient?.auth.onAuthStateChange?.((event, session) => {
-        currentSession = session;
-        if (event === 'SIGNED_OUT') {
-            currentProfile = null;
-            if (page === 'admin' || page === 'upload') window.location.href = 'login.html';
-            else renderAuthNav();
-        }
-    });
 
-    await catalogue;
+    if (page === 'home' || page === 'search') await loadSongs();
     if (page === 'login') await handleLoginPage();
     if (page === 'register') await handleRegisterPage();
     if (page === 'upload') await handleUploadPage();
@@ -1318,45 +1300,6 @@ player?.addEventListener('click', (event) => {
 
 updatePlayerVolume();
 updatePlayerToggle();
+bindPlayerVolumeGroup();
 
-// Auth and admin action buttons share an exception-safe duplicate-submit guard.
-async function runFormAction(button, action) {
-    const form = button.closest('form');
-    if (button.disabled || form?.dataset.busy) return;
-    if (form) form.dataset.busy = 'true';
-    button.disabled = true;
-    button.setAttribute('aria-busy', 'true');
-    try { await action(); }
-    catch { showMessage('İşlem tamamlanamadı. Bağlantınızı kontrol edip tekrar deneyin.', 'error'); }
-    finally { button.disabled = false; button.removeAttribute('aria-busy'); if (form) delete form.dataset.busy; }
-}
-
-async function cleanupStorage(paths) {
-    try {
-        const { error } = await supabaseClient.storage.from(backend.bucket).remove(paths);
-        if (error) throw error;
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-// Trap focus in either modal, then return it to the opening control on close.
-document.addEventListener('keydown', event => {
-    const modal = !adminEditPanel?.hidden && adminEditPanel ? adminEditPanel : player?.classList.contains('active') ? player : null;
-    if (event.key !== 'Tab' || !modal) return;
-    const focusable = [...modal.querySelectorAll('button:not(:disabled), a[href], input:not([type=hidden]):not(:disabled), select, iframe')]
-        .filter(element => element.getClientRects().length);
-    const first = focusable[0], last = focusable.at(-1);
-    if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
-        event.preventDefault(); last?.focus();
-    } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
-        event.preventDefault(); first?.focus();
-    }
-});
-document.querySelector('[data-play-all]')?.addEventListener('click', () => playSong(0));
-audio?.addEventListener('error', () => {
-    if (audio.getAttribute('src')) showMessage('Bu şarkı oynatılamadı. Başka bir şarkı seçebilir veya tekrar deneyebilirsiniz.', 'error');
-});
-
-init().catch(() => showMessage('İşlem tamamlanamadı. Lütfen sayfayı yenileyip tekrar deneyin.', 'error'));
+init();

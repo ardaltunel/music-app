@@ -8,24 +8,20 @@
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-icon-180x180.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css?v=14">
-    <link rel="stylesheet" href="assets/css/library.css?v=14">
-
-    <meta name="robots" content="noindex,follow">
+    <link rel="stylesheet" href="assets/css/style.css?v=10">
+    <link rel="stylesheet" href="assets/css/overscroll-fix.css">
 </head>
 <body data-page="login">
-<a class="skip-link" href="#main">İçeriğe geç</a>
-<main id="main" class="form-container auth-page">
-    <a class="auth-brand" href="index.html">m. <span>Music</span></a>
-    <div class="auth-intro"><p class="eyebrow">MÜZİK BİR ARAYA GETİRİR</p><h1>Yeniden merhaba.</h1><p>Koleksiyona kendi sesini katmak için giriş yap.</p></div>
-    <form method="post" data-login-form>
-        <div data-message-area aria-live="polite" aria-atomic="true"></div>
-        <label for="email">E-posta <span>*</span></label>
-        <input id="email" type="email" name="email" autocomplete="email" placeholder="E-posta adresiniz" required maxlength="150" class="box">
-        <label for="password">Şifre <span>*</span></label>
+<section class="form-container auth-page">
+    <h3 class="heading"><a href="index.html">Music</a></h3>
+    <form data-login-form>
+        <div data-message-area></div>
+        <p>E-posta <span>*</span></p>
+        <input type="email" name="email" placeholder="E-posta adresiniz" required maxlength="150" class="box">
+        <p>Şifre <span>*</span></p>
         <div class="password-field">
-            <input id="password" type="password" name="password" autocomplete="current-password" placeholder="Şifreniz" required class="box">
-            <button type="button" class="toggle-password" aria-label="Şifreyi göster"><i aria-hidden="true" class="fas fa-eye"></i></button>
+            <input type="password" name="password" placeholder="Şifreniz" required class="box">
+            <button type="button" class="toggle-password" aria-label="Şifreyi göster"><i class="fas fa-eye"></i></button>
         </div>
         <button type="submit" class="btn">Giriş Yap</button>
         <div class="auth-divider" aria-hidden="true"><span>veya</span></div>
@@ -41,14 +37,11 @@
         <a href="register.html" class="option-btn">Hesap Oluştur</a>
         <a href="index.html" class="option-btn">Ana Sayfaya Dön</a>
     </form>
-</main>
-<footer class="site-footer"><a href="index.html">Music / Arda Altunel</a><span>Hayatın arka planında iyi müzik.</span></footer>
-<noscript><p class="empty-state">Şarkıları dinlemek ve hesabınıza giriş yapmak için JavaScript’i etkinleştirin.</p></noscript>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/core.js"></script>
-<script src="assets/js/app.js?v=14"></script>
+<script src="assets/js/app.js?v=13"></script>
 </body>
 </html>
 

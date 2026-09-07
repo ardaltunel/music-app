@@ -3,16 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sayfa bulunamadı | Music</title>
-    <meta name="robots" content="noindex,follow">
-    <style>
-        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f4ef; color: #202722; font: 16px/1.6 system-ui, sans-serif; }
-        main { max-width: 32rem; padding: 2rem; }
-        p:first-child { color: #0f766e; font-weight: 700; letter-spacing: .15em; }
-        h1 { font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; }
-        a { display: inline-block; padding: .8rem 1.2rem; margin-top: 1rem; background: #0f766e; color: white; border-radius: 6px; text-decoration: none; }
-        a:focus-visible { outline: 3px solid #202722; outline-offset: 4px; }
-    </style>
+    <title>Yönlendiriliyor - Arda Altunel Music</title>
     <script>
         const routes = {
             '/index.php': '/index.html',
@@ -27,13 +18,10 @@
         if (match) {
             const base = path.slice(0, -match.length);
             window.location.replace(base + routes[match] + window.location.search + window.location.hash);
+        } else {
+            window.location.replace('index.html');
         }
     </script>
 </head>
-<body>
-<main><p>MUSIC / 404</p><h1>Bu sayfada ses yok.</h1><p>Aradığınız sayfa taşınmış veya kaldırılmış olabilir. Müziğe kütüphaneden devam edebilirsiniz.</p><a id="home" href="index.html">Kütüphaneye dön</a></main>
-<script>
-    document.getElementById('home').href = location.hostname.endsWith('.github.io') ? '/' + location.pathname.split('/')[1] + '/' : '/';
-</script>
-</body>
+<body></body>
 </html>

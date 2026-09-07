@@ -1,0 +1,14 @@
+html {
+    background: #f3f6f8;
+    overscroll-behavior-y: none;
+}
+
+body {
+    background-color: #f3f6f8;
+    overflow-x: hidden;
+}
+
+body.theme-dark,
+html:has(body.theme-dark) {
+    background: #101114;
+}

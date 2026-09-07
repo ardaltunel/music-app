@@ -119,7 +119,6 @@ Run the following files in the Supabase Dashboard SQL Editor in the specified or
 1. database/supabase/schema.sql
 2. database/supabase/seed-songs.sql
 3. database/supabase/admin-actions-policies.sql
-4. database/supabase/security-hardening.sql
 ```
 
 After creating your first account, run the following query to assign administrator privileges:
@@ -208,36 +207,3 @@ npx supabase secrets set ALLOWED_ORIGINS=https://music.example.com
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-## Development and verification
-
-The production site still uses plain HTML, CSS and JavaScript; no framework or Node server is required by GitHub Pages. Node 24 is used only for local tooling.
-
-```text
-npm ci
-npm run check
-npm run dev
-```
-
-`check` runs lint, strict typechecking of the shared validation module and Edge Function, behavioral tests, PostgreSQL RLS tests via PGlite, and a static build into `dist/`. The legacy DOM application remains JavaScript and is covered by lint and behavioral tests rather than a full TypeScript conversion. The build verifies HTML asset references and the static catalogue's files. GitHub Pages can continue serving the repository root as before.
-
-For isolated visual testing when Supabase is unavailable:
-
-```text
-npm run dev:fixture
-```
-
-Open `http://127.0.0.1:8001`. On this **local test server only**, `upload.html?fixture=user` and `admin.html?fixture=admin` show sample authenticated layouts. These fixtures do not modify Supabase and are excluded from `dist/`. They are never loaded by production HTML.
-
-### Security upgrade for an existing deployment
-
-1. Resume the Supabase project if it is paused. At the September 8, 2026 audit it reported `INACTIVE`; no live database changes were applied.
-2. Run `database/supabase/security-hardening.sql` **after** the previous schema/policy scripts. It is transactional and rerunnable, and deletes no rows or files. Keep the `private` schema out of the Data API's exposed schemas.
-3. Deploy the updated `youtube-search` function using the existing deployment instructions. The SQL must precede the function: its daily budget RPC fails closed if unavailable. Supabase injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` into Edge Functions; never put them in browser configuration.
-4. Verify registration, email confirmation, Google OAuth, ordinary-user submission, admin approval/edit/delete, and file cleanup with dedicated test accounts on the resumed project.
-
-The function permits 80 uncached upstream searches per YouTube quota day, shared across isolates using an atomic database counter. Its 15-minute in-memory cache and request coalescing reduce repeated calls. This is a global quota guard, not a per-user abuse prevention system. Origin checks are CORS controls, not authentication.
-
-The existing `music-files` bucket remains public to preserve playback URLs. Hiding a song removes it from the catalogue, **not** from access through a previously known file URL. If private moderation assets are required, migrate to a separate private upload bucket and a controlled publication workflow. Browser MIME validation and bucket MIME restrictions are not malware scanning or server-side file-signature inspection.
-
-See `docs/review.md` for the architecture review, verification scope and remaining limitations.
