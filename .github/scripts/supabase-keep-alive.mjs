@@ -65,7 +65,7 @@ async function main() {
     const result = await checkDatabase(config);
     if (process.env.GITHUB_STEP_SUMMARY) {
         await appendFile(process.env.GITHUB_STEP_SUMMARY,
-            `### Supabase healthy\nVerified a real public catalogue query at ${result.checked_at}.\nSchedule: four checks per day. No song data was modified.\n`);
+            `### Supabase healthy\nVerified a real public catalogue query at ${result.checked_at}.\nSchedule: every third calendar day at 21:00 UTC. No song data was modified.\n`);
     }
 }
 

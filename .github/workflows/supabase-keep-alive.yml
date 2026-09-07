@@ -2,8 +2,8 @@ name: Supabase Keep Alive
 
 on:
   schedule:
-    # Four real database checks per day; avoid the congested top of the hour.
-    - cron: "17 2,8,14,20 * * *"
+    # Original schedule: every third calendar day, at 21:00 UTC.
+    - cron: "0 21 */3 * *"
   workflow_dispatch:
   push:
     branches: [main]

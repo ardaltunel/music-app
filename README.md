@@ -206,7 +206,7 @@ npx supabase secrets set ALLOWED_ORIGINS=https://music.example.com
 
 ## Supabase health automation
 
-`.github/workflows/supabase-keep-alive.yml` checks the public `songs` table four times daily (02:17, 08:17, 14:17 and 20:17 UTC; 05:17, 11:17, 17:17 and 23:17 in Turkey). It also runs when the health-check code/configuration changes and can be started from GitHub Actions with **Run workflow**.
+`.github/workflows/supabase-keep-alive.yml` uses the original three-day calendar schedule at 21:00 UTC (00:00 the following day in Turkey). It runs on days 1, 4, 7, and so on of each month; the interval at month boundaries can be shorter than 72 hours. It also runs when the health-check code/configuration changes and can be started from GitHub Actions with **Run workflow**.
 
 The check uses the existing publishable key in the `apikey` header, verifies the response is a valid JSON catalogue result, applies a 20-second request timeout and retries transient failures up to four times. No song, profile or Storage data is changed. A failed check produces a failed Actions run and an explanatory run summary; configure GitHub Actions notifications to receive failures.
 
