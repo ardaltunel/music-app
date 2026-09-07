@@ -133,7 +133,7 @@ create policy "Users can submit songs"
 on public.songs
 for insert
 to authenticated
-with check (user_id = (select auth.uid()));
+with check (user_id = (select auth.uid()) and (status = 'pending' or public.is_admin()));
 
 drop policy if exists "Admins can update songs" on public.songs;
 create policy "Admins can update songs"
@@ -207,3 +207,5 @@ using (
 
 -- After creating your first account, set it as admin manually:
 -- update public.profiles set role = 'admin' where email = 'your-email@example.com';
+
+-- Required final step: run security-hardening.sql after the other setup scripts.

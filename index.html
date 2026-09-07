@@ -4,33 +4,43 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta name="description" content="Arda Altunel Music playlist">
+    <meta name="description" content="Music ile sevdiğin şarkıları dinle, yeni sesler keşfet ve kendi müziğini paylaş.">
     <meta name="google-site-verification" content="WhMumUYTcsUfTcXBMlek_AFSOMQFO66puERKoP0kpbE">
     <title>Music App | Arda Altunel</title>
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-icon-180x180.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css?v=10">
-    <link rel="stylesheet" href="assets/css/overscroll-fix.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=14">
+    <link rel="stylesheet" href="assets/css/library.css?v=14">
+
+    <link rel="canonical" href="https://ardaltunel.github.io/music/">
+    <meta property="og:title" content="Music — Günün ritmini sen seç">
+    <meta property="og:description" content="Tanıdık şarkılar, yeni keşifler. Arda Altunel Music kütüphanesini dinle.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="tr_TR">
+    <meta property="og:url" content="https://ardaltunel.github.io/music/">
+    <meta property="og:image" content="https://ardaltunel.github.io/music/assets/images/apple-icon-180x180.png">
 </head>
 <body data-page="home">
+<a class="skip-link" href="#main">İçeriğe geç</a>
 <header class="site-header">
-    <a href="index.html" class="brand">Music</a>
-    <nav class="top-nav" data-auth-nav>
-        <a href="upload.html"><i class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>
+    <a href="index.html" class="brand" aria-label="Music ana sayfa"><span class="brand-symbol" aria-hidden="true">m.</span>Music<span class="brand-caption">SEÇ, DİNLE, PAYLAŞ.</span></a>
+    <nav class="top-nav" aria-label="Ana menü" data-auth-nav>
+        <a href="upload.html"><i aria-hidden="true" class="fas fa-cloud-arrow-up"></i><span>Müzik Ekle</span></a>
     </nav>
 </header>
 
-<section class="playlist">
-    <div class="page-title">
-        <h1>Music Playlist</h1>
-        <p>Yayındaki şarkılar.</p>
+<main class="playlist" id="main">
+    <div class="library-hero">
+        <div class="page-title"><p class="eyebrow">ARDA ALTUNEL · MUSIC</p><h1>Günün ritmini<br><span>sen seç.</span></h1><p>Tanıdık şarkılar, yeni keşifler.<br>Bir şarkıyla başla, kendine bir an ayır.</p><button class="hero-play" type="button" data-play-all disabled><i class="fas fa-play" aria-hidden="true"></i> Dinlemeye başla</button></div>
+        <div class="hero-art" aria-hidden="true"><div class="record"><span>music<br><small>SIDE A · PLAY EVERY DAY</small></span></div><span class="record-caption">İYİ MÜZİĞİN ZAMANI YOK.</span></div>
     </div>
 
+    <div class="collection-heading"><div><p class="eyebrow">SENİN SES ALANIN</p><h2>Kütüphane <span data-song-count></span></h2></div></div>
     <section class="search__bar">
-        <form class="container search__bar-container" data-search-form>
-            <i class="fas fa-search"></i>
-            <input type="search" name="search" placeholder="Şarkı veya sanatçı ara" autocomplete="off">
+        <form class="container search__bar-container" data-search-form role="search">
+            <i aria-hidden="true" class="fas fa-search"></i>
+            <input type="search" aria-label="Şarkı veya sanatçı ara" maxlength="100" name="search" placeholder="Şarkı veya sanatçı ara" autocomplete="off">
             <button type="submit">Ara</button>
         </form>
     </section>
@@ -40,7 +50,7 @@
             <p class="empty-state">Şarkılar yükleniyor...</p>
         </article>
     </div>
-</section>
+</main>
 
 <div class="music-player" id="myModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="player-title">
     <div class="main-box">
@@ -52,14 +62,14 @@
                 <div class="name" id="player-title"></div>
                 <div class="artist"></div>
             </div>
-            <img src="" class="album" alt="">
+            <img src="assets/images/disc.png" class="album" alt="">
             <div class="youtube-player" data-youtube-player hidden></div>
             <div class="player-controls" data-native-player>
-                <audio src="" class="music" id="myAudio" preload="metadata"></audio>
+                <audio class="music" id="myAudio" preload="none"></audio>
                 <div class="player-control-row">
                     <div class="player-volume-group">
                         <button class="player-control-button" type="button" data-player-mute aria-label="Sesi kapat">
-                            <i class="fas fa-volume-high"></i>
+                            <i aria-hidden="true" class="fas fa-volume-high"></i>
                         </button>
                         <input class="player-volume" type="range" min="0" max="1" value="1" step="0.01" data-player-volume aria-label="Ses seviyesi">
                     </div>
@@ -68,14 +78,14 @@
                             <i class="fa fa-angle-left" aria-hidden="true"></i>
                         </button>
                         <button class="player-control-button is-primary" type="button" data-player-toggle aria-label="Oynat">
-                            <i class="fas fa-play"></i>
+                            <i aria-hidden="true" class="fas fa-play"></i>
                         </button>
                         <button class="player-control-button player-skip-button" id="next_song_button" type="button" aria-label="Sonraki şarkı">
                             <i class="fa fa-angle-right" aria-hidden="true"></i>
                         </button>
                     </div>
                     <a class="player-download" href="#" data-player-download>
-                        <i class="fas fa-download"></i><span>İndir</span>
+                        <i aria-hidden="true" class="fas fa-download"></i><span>İndir</span>
                     </a>
                 </div>
                 <div class="player-timeline">
@@ -90,10 +100,13 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<footer class="site-footer"><a href="index.html">Music / Arda Altunel</a><span>Hayatın arka planında iyi müzik.</span></footer>
+<noscript><p class="empty-state">Şarkıları dinlemek ve hesabınıza giriş yapmak için JavaScript’i etkinleştirin.</p></noscript>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
 <script src="assets/js/supabase-config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/app.js?v=12"></script>
+<script src="assets/js/core.js"></script>
+<script src="assets/js/app.js?v=14"></script>
 </body>
 </html>
 

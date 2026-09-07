@@ -1,0 +1,20 @@
+{
+  "name": "music-playlist",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "lint": "eslint assets/js tests scripts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "dev": "node scripts/serve.mjs",
+    "dev:fixture": "node scripts/serve.mjs --fixture",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "eslint": "10.10.0",
+    "jsdom": "26.1.0",
+    "typescript": "5.9.3"
+  }
+}

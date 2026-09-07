@@ -1,14 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
+    color-scheme: light;
     --main-color: #0f766e;
     --accent: #f97316;
     --red: #dc2626;
     --green: #15803d;
     --amber: #b45309;
     --light-color: #667085;
-    --light-bg: #f3f6f8;
-    --black: #172033;
+    --light-bg: #f5f4ef;
+    --black: #202722;
     --white: #fff;
     --surface: #fff;
     --surface-muted: #f8fafc;
@@ -23,12 +23,13 @@
     --modal-bg: rgba(15, 23, 42, .58);
     --player-bg: rgba(23, 32, 51, .68);
     --line: #d9e0e7;
-    --box-shadow: 0 18px 45px rgba(23, 32, 51, .09);
+    --box-shadow: 0 2px 8px rgba(23, 32, 51, .04);
     --border: 1px solid var(--line);
 }
 
 body.theme-dark {
-    --main-color: #20c997;
+    color-scheme: dark;
+    --main-color: #86d7b0;
     --accent: #eab308;
     --red: #fb7185;
     --green: #4ade80;
@@ -50,22 +51,20 @@ body.theme-dark {
     --player-bg: rgba(6, 7, 10, .78);
     --line: rgba(244, 244, 245, .10);
     --border: 1px solid rgba(244, 244, 245, .10);
-    --box-shadow: 0 18px 45px rgba(0, 0, 0, .28);
+    --box-shadow: none;
 }
 
 * {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    outline: none;
     border: none;
     text-decoration: none;
 }
 
 html {
     font-size: 62.5%;
-    overflow-x: hidden;
 }
 
 body {
@@ -100,7 +99,7 @@ section {
     padding: 1.4rem 2.4rem;
     background: var(--header-bg);
     border-bottom: var(--border);
-    backdrop-filter: blur(14px);
+
 }
 
 .brand {
@@ -164,14 +163,14 @@ section {
 
 .page-title,
 .heading {
-    text-align: center;
-    margin: 2rem auto 2.4rem;
+    text-align: left;
+    margin: 2rem 0 2.4rem;
 }
 
 .page-title h1,
 .heading {
     font-size: clamp(3rem, 5vw, 5.6rem);
-    line-height: 1;
+    line-height: 1.08;
     font-weight: 800;
     color: var(--black);
 }
@@ -263,7 +262,8 @@ section {
 
 .btn:hover,
 .option-btn:hover {
-    background: var(--accent);
+    background: var(--main-color);
+    filter: brightness(.9);
 }
 
 .btn:disabled,
@@ -284,9 +284,10 @@ section {
     padding: 2rem;
 }
 
-.form-container form p {
+.form-container form label {
+    display: block;
     padding-top: 1rem;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: var(--light-color);
 }
@@ -343,7 +344,7 @@ section {
 
 .playlist .box-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.6rem;
     align-items: stretch;
 }
@@ -362,11 +363,11 @@ section {
 
 .playlist .box-container .box .album {
     flex: 0 0 auto;
-    margin: 2rem auto 1.4rem;
+    margin: 0 0 1.6rem;
     border-radius: 8px;
     object-fit: cover;
     aspect-ratio: 1;
-    width: min(16rem, 70%);
+    width: 100%;
     height: auto;
     display: block;
 }
@@ -535,7 +536,7 @@ section {
 
 .search__bar {
     padding-top: 0;
-    max-width: 820px;
+    max-width: none;
 }
 
 .search__bar input[type=search]::-ms-clear,
@@ -591,7 +592,7 @@ section {
     position: fixed;
     inset: 0;
     background: var(--player-bg);
-    backdrop-filter: blur(10px);
+
     overflow-y: auto;
     z-index: 1000;
 }
@@ -601,7 +602,7 @@ section {
 }
 
 .main-box {
-    width: min(80rem, 100%);
+    width: min(64rem, 100%);
     margin: auto;
     display: block;
 }
@@ -635,7 +636,6 @@ section {
 .music-player .box {
     position: relative;
     max-height: calc(100vh - clamp(2rem, 6vw, 4.8rem));
-    overflow-x: hidden;
     overflow-y: auto;
     background: var(--surface);
     border-radius: 8px;
@@ -776,7 +776,7 @@ section {
 .player-controls {
     margin-top: 1.8rem;
     padding: 1.2rem;
-    background: linear-gradient(135deg, rgba(24, 26, 32, .98), rgba(16, 17, 20, .96));
+    background: #171e1b;
     border-top: 1px solid rgba(255, 255, 255, .08);
     color: #f8fafc;
 }
@@ -838,11 +838,12 @@ section {
     background: var(--main-color);
     color: #fff;
     font-size: 1.7rem;
-    box-shadow: 0 12px 28px rgba(15, 118, 110, .32);
+    box-shadow: none;
 }
 
 .player-control-button.is-primary:hover {
-    background: var(--accent);
+    background: var(--main-color);
+    filter: brightness(.9);
     color: #fff;
 }
 
@@ -1151,7 +1152,7 @@ section {
 
 @media (max-width: 720px) {
     html {
-        font-size: 58%;
+        font-size: 62.5%;
     }
 
     .site-header {
@@ -1172,7 +1173,7 @@ section {
         flex: 0 0 auto;
         justify-content: flex-end;
         gap: .6rem;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
     }
 
     .top-nav a,
@@ -1279,7 +1280,7 @@ section {
     .admin-controls {
         grid-column: 2;
         justify-content: flex-start;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         gap: .7rem;
     }
 }

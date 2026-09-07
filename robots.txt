@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ardaltunel.github.io/music/sitemap.xml

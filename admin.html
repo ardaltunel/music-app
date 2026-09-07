@@ -8,22 +8,31 @@
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-icon-180x180.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css?v=10">
-    <link rel="stylesheet" href="assets/css/overscroll-fix.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=14">
+    <link rel="stylesheet" href="assets/css/library.css?v=14">
+
+    <meta name="robots" content="noindex,follow">
 </head>
 <body data-page="admin">
+<a class="skip-link" href="#main">İçeriğe geç</a>
 <header class="site-header">
-    <a href="index.html" class="brand">Music</a>
-    <nav class="top-nav" data-auth-nav>
+    <a href="index.html" class="brand" aria-label="Music ana sayfa"><span class="brand-symbol" aria-hidden="true">m.</span>Music<span class="brand-caption">SEÇ, DİNLE, PAYLAŞ.</span></a>
+    <nav class="top-nav" aria-label="Ana menü" data-auth-nav>
     </nav>
 </header>
 
-<section class="admin-panel">
+<main class="admin-panel" id="main">
     <div class="page-title">
         <h1>Şarkı Yönetimi</h1>
         <p>Onay bekleyen şarkılar sitede görünmez. Onaylananlar yayına alınır, gizlenenler yayından kalkar.</p>
     </div>
-    <div data-message-area></div>
+    <div data-message-area aria-live="polite" aria-atomic="true"></div>
+    <div class="admin-filters" role="group" aria-label="Şarkı durumuna göre filtrele">
+        <button type="button" data-status-filter="all" aria-pressed="true">Tümü <span>0</span></button>
+        <button type="button" data-status-filter="pending" aria-pressed="false">Onay bekleyen <span>0</span></button>
+        <button type="button" data-status-filter="approved" aria-pressed="false">Yayında <span>0</span></button>
+        <button type="button" data-status-filter="hidden" aria-pressed="false">Gizli <span>0</span></button>
+    </div>
     <div class="admin-edit-panel" data-admin-edit-panel hidden>
         <form class="admin-edit-dialog" data-admin-edit-form role="dialog" aria-modal="true" aria-labelledby="admin-edit-title">
             <input type="hidden" name="id">
@@ -31,9 +40,9 @@
             <input type="hidden" name="current_album_path">
             <div class="admin-edit-head">
                 <strong id="admin-edit-title">Şarkıyı Düzenle</strong>
-                <button type="button" class="admin-edit-close" data-admin-edit-cancel aria-label="Kapat"><i class="fas fa-times"></i></button>
+                <button type="button" class="admin-edit-close" data-admin-edit-cancel aria-label="Kapat"><i aria-hidden="true" class="fas fa-times"></i></button>
             </div>
-            <div class="admin-edit-message" data-admin-edit-message hidden></div>
+            <div class="admin-edit-message" data-admin-edit-message role="alert" hidden></div>
             <div class="admin-edit-grid">
                 <label>
                     <span>Müzik Adı</span>
@@ -53,11 +62,11 @@
                 </label>
                 <label>
                     <span>Yeni Müzik Dosyası</span>
-                    <input type="file" name="music" class="box" accept="audio/*">
+                    <input type="file" name="music" class="box" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,audio/flac">
                 </label>
                 <label>
                     <span>Yeni Kapak Görseli</span>
-                    <input type="file" name="album" class="box" accept="image/*">
+                    <input type="file" name="album" class="box" accept="image/jpeg,image/png,image/gif,image/webp">
                 </label>
             </div>
             <div class="admin-edit-actions">
@@ -73,11 +82,14 @@
             </div>
         </article>
     </div>
-</section>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</main>
+<footer class="site-footer"><a href="index.html">Music / Arda Altunel</a><span>Hayatın arka planında iyi müzik.</span></footer>
+<noscript><p class="empty-state">Şarkıları dinlemek ve hesabınıza giriş yapmak için JavaScript’i etkinleştirin.</p></noscript>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
 <script src="assets/js/supabase-config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/app.js?v=12"></script>
+<script src="assets/js/core.js"></script>
+<script src="assets/js/app.js?v=14"></script>
 </body>
 </html>
 
